@@ -17,81 +17,9 @@ else:
     print('Error connecting bracelet. Aborting.')
     sys.exit()
 
-def interactive_belt_connect(belt_controller):
-    """Interactive procedure to connect a belt. The interface to use is asked via the console.
-
-    :param BeltController belt_controller: The belt controller to connect.
-    """
-
-    # Ask for the interface
-    interface = input("Connect via Bluetooth or USB? [b,u]")
-    interface = ""
-    print("Connect via Bluetooth or USB? [b,u]", end="")
-    while interface == "":
-        interface = input()
-
-    if interface.lower() == "b":
-        # Scan for advertising belt
-        with pybelt.belt_scanner.create() as scanner:
-            print("Start BLE scan.")
-            belts = scanner.scan()
-            print("BLE scan completed.")
-        if len(belts) == 0:
-            print("No belt found.")
-            return belt_controller
-        if len(belts) > 1:
-            print("Select the belt to connect.")
-            for i, belt in enumerate(belts):
-                print("{}. {} - {}".format((i + 1), belt.name, belt.address))
-            belt_selection = input("[1-{}]".format(len(belts)))
-            try:
-                belt_selection_int = int(belt_selection)
-            except ValueError:
-                print("Unrecognized input.")
-                return belt_controller
-            print("Connect the belt.")
-            belt_controller.connect(belts[belt_selection_int - 1])
-        else:
-            print("Connect the belt.")
-            belt_controller.connect(belts[0])
-
-    elif interface.lower() == "u":
-        # List serial COM ports
-        ports = serial.tools.list_ports.comports()
-        if ports is None or len(ports) == 0:
-            print("No serial port found.")
-            return belt_controller
-        if len(ports) == 1:
-            connect_ack = 'y'
-            if connect_ack.lower() == "y" or connect_ack.lower() == "yes":
-                print("Connect the belt.")
-                belt_controller.connect(ports[0][0])
-            else:
-                print("Unrecognized input.")
-                return belt_controller
-        else:
-            print("Select the serial COM port to use.")
-            for i, port in enumerate(ports):
-                print("{}. {}".format((i + 1), port[0]))
-            belt_selection = input("[1-{}]".format(len(ports)))
-            try:
-                belt_selection_int = int(belt_selection)
-            except ValueError:
-                print("Unrecognized input.")
-                return belt_controller
-            print("Connect the belt.")
-            belt_controller.connect(ports[belt_selection_int - 1][0])
-
-    else:
-        print("Unrecognized input.")
-        return belt_controller
-
-    return belt_controller
-
-
 # Define shapes with vertices
 shapes = {
-    '0': [(0, 0), (0, 4), (2, 4), (2, 0), (0, 0)],
+    '0': [(0, 0), (2, 0), (2, -4), (0, -4),  (0, 0)],
     '1': [(0, 0), (0, -2)],
     '2': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4)],
     '3': [(0, 0), (2, 0), (2, -2), (0, -2), (2, -2), (2, -4), (0, -4)],
@@ -99,37 +27,43 @@ shapes = {
     '5': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, -4), (-2, -4)],
     '6': [(0, 0), (-2, 0), (-2, -4), (0, -4), (0, -2), (-2, -2)],
     '7': [(0, 0), (2, 0), (2, -4)],
-    '8': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, -4), (-2, -4), (-2, -2), (0, -2), (0, 0)],
+    '8': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4), (2, -2), (0, -2), (0, 0)],
     '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4), (-2, -4)],
-    'a': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -2.5)],
-    'b': [(0, 0), (0, -4), (2, -4), (2, -2), (0, -2)],
+    'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -2.2)],
+    'b': [(0, 0), (2, 0), (2, -2), (0, -2), (0, 2)],
     'c': [(0, 0), (-2, 0), (-2, -2), (0, -2)],
-    'd': [(0, 0), (0, -4), (-2, -4), (-2, -2), (0, -2)],
+    'd': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 2)],
     'e': [(0, 0), (2, 0), (2, 2), (0, 2), (0, -2), (2, -2)],
     'f': [(0, 0), (-2, 0), (-2, -4), (-2, -2), (0, -2)],
     'h': [(0, 0), (0, -4), (0, -2), (2, -2), (2, -4)],
-    'i': [(0, 0), (4, 0), (2, 0), (2, -4), (0, -4), (4, -4)],
+    'i': [(0, 0), (2, 0), (1, 0), (1, -4), (0, -4), (2, -4)],
     'j': [(0, 0), (2, 0), (2, -4), (0, -4), (0, -2)],
     'k': [(0, 0), (0, -4), (2, -2), (1, -3), (2, -4)],
     'l': [(0, 0), (0, -4), (2, -4)],
     'm': [(0, 0), (0, 4), (2, 2), (4, 4), (4, 0)],
     'n': [(0, 0), (0, 4), (2, 0), (2, 4)],
-    'p': [(0, 0), (0, 4), (2, 4), (2, 2), (0, 2)],
-    'q': [(0, 0), (0, 4), (-2, 4), (-2, 2), (0, 2)],
+    'p': [(0, 0), (2, 0), (2, 2), (0, 2), (0, -2)],
+    'q': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -2)],
     'u': [(0, 0), (0, -2), (2, -2), (2, 0)],
-    'r': [(0, 0), (0, 4), (2, 4), (2, 2), (0, 2), (2, 0)],
+    'r': [(0, 0), (2, 0), (2, 2), (0, 2), (0, -2), (0,0), (2,-2)],
     'v': [(0, 0), (2, -4), (4, 0)],
     'w': [(0, 0), (0, -4), (2, -2), (4, -4), (4, 0)],
-    'y': [(0, 0), (2, -2), (4, 0), (0, -4)],
+    'y': [(0, 0), (2, -2), (4, 0), (2, -2), (2, -4)],
     'z': [(0, 0), (2, 0), (0, -2), (2, -2)]
 }
 
 # Function to calculate direction and distance
-def calculate_direction_and_time(start, end, speed=1):
+def calculate_direction_and_time(start, end, speed=1.5):
+    max_distance = 25  # Maximum comfortable distance for movement
     dx = end[0] - start[0]
     dy = end[1] - start[1]
     distance = np.sqrt(dx**2 + dy**2)
-    time_required = distance / speed 
+
+    # If the distance exceeds max_distance, adjust the time to cap it
+    if distance > max_distance:
+        time_required = max_distance / speed
+    else:
+        time_required = distance / speed
 
     vibration_intensity = 50
     
@@ -258,7 +192,7 @@ def calculate_direction_and_time(start, end, speed=1):
     
 
 # Function to simulate tactile feedback based on shape
-def simulate_tactile_feedback(shape, speed=1):
+def simulate_tactile_feedback(shape, speed=1.5):
     vertices = shapes[shape]
     vertices.append(vertices[-1])  # Add the last vertex again to complete the shape
 
@@ -313,3 +247,6 @@ for category, items in categories.items():
         #if (index + 1) % 5 == 0:
         #    print("5-second rest \n")
         #    time.sleep(5)
+
+belt_controller.disconnect_belt() if belt_controller else None
+sys.exit()
