@@ -89,14 +89,15 @@ def train_save(epochs, train_data, valid_data):
     scheduler = torch.optim.lr_scheduler.StepLR(optimiser, step_size=15, gamma=0.5)
 
     train(epochs, cnn, train_loader, valid_loader, optimiser, loss_func, scheduler=scheduler)
-    torch.save(cnn, 'torch_emnistcnn_letter.pt')
+    torch.save(cnn, 'torch_emnistcnn_letter_v2.pt')
 
 if __name__ == '__main__':
-    epochs = 60
+    epochs = 15
     # Load EMNIST letters dataset
     images, labels = extract_training_samples('letters')
     print(images.shape)
     #image 240.000, letters 124.800
+    labels = [i-1 for i in labels]
 
     # Prepare training and validation data
     train_images = torch.tensor((images[:100000] / 255 - 0.5).reshape(100000, 1, 28, 28)).float()
@@ -104,11 +105,18 @@ if __name__ == '__main__':
     valid_images = torch.tensor((images[100000:] / 255 - 0.5).reshape(24800, 1, 28, 28)).float()
     valid_labels = torch.tensor(labels[100000:]).long()
 
+    print(valid_labels)
+    print(min(train_labels))
+    print(max(train_labels))
+
     # Create datasets
     train_data = list(zip(train_images, train_labels))
     valid_data = list(zip(valid_images, valid_labels))
 
     # Filter out any invalid labels (if necessary)
+    '''valid_train_data = [(img, label) for img, label in train_data if 1 <= label < 27]
+    valid_valid_data = [(img, label) for img, label in valid_data if 1 <= label < 27]'''
+
     valid_train_data = [(img, label) for img, label in train_data if 0 <= label < 26]
     valid_valid_data = [(img, label) for img, label in valid_data if 0 <= label < 26]
 
