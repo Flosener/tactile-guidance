@@ -194,7 +194,7 @@ def capture_direction():
 
 # Familiarization phase
 def familiarization_phase():
-    time.sleep(5)
+    time.sleep(10)
     print("\nFamiliarization Phase")
     
     for direction in directions:
@@ -211,7 +211,24 @@ def familiarization_phase():
             else:
                 print("Incorrect response. Please try again.")
 
+    if belt_controller:
+        belt_controller.stop_vibration()
+        belt_controller.send_pulse_command(
+            channel_index=0,
+            orientation_type=BeltOrientationType.BINARY_MASK,
+            orientation=0b111100,
+            intensity=calibrated_intensity,
+            on_duration_ms=150,
+            pulse_period=500,
+            pulse_iterations=5, 
+            series_period=5000,
+            series_iterations=1,
+            timer_option=BeltVibrationTimerOption.RESET_TIMER,
+            exclusive_channel=False,
+            clear_other_channels=False)
+
 def training_task():
+    time.sleep(10)
     print("\nTraining start will start")
     correct_responses_per_block = []
     blocks = 3
