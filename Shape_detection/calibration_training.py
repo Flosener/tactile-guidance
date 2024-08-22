@@ -480,7 +480,7 @@ def familiarization_phase():
 
 def training_task():
     time.sleep(10)
-    print("\nTraining start will start")
+    print("\nTraining Task will start")
     
     correct_responses_per_block = []
     blocks = 3
