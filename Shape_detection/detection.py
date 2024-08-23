@@ -2,12 +2,14 @@ import numpy as np
 import time
 import sys
 import random
+import keyboard
 from auto_connect import interactive_belt_connect, setup_logger
 from pybelt.belt_controller import (BeltConnectionState, BeltController,
                                     BeltControllerDelegate, BeltMode,
                                     BeltOrientationType,
                                     BeltVibrationTimerOption, BeltVibrationPattern)
 from bracelet import connect_belt
+from threading import Event, Thread
 
 # Connect to the belt
 connection_check, belt_controller = connect_belt()
@@ -62,14 +64,11 @@ def calculate_direction_and_time(start, end, speed=1.5):
     dx = end[0] - start[0]
     dy = end[1] - start[1]
     distance = np.sqrt(dx**2 + dy**2)
+    time_required = distance / speed 
 
-    # If the distance exceeds max_distance, adjust the time to cap it
-    if distance > max_distance:
-        time_required = max_distance / speed
-    else:
-        time_required = distance / speed
-
+    # CHANGE THE INTENSITY FROM CALIBRATED_INTENSITY
     vibration_intensity = 50
+    stop_event = Event()
     
     if dx > 0 and dy == 0:
         if belt_controller:
@@ -132,65 +131,145 @@ def calculate_direction_and_time(start, end, speed=1.5):
             )
             return 'down', time_required
     elif dx > 0 and dy > 0:
-        if belt_controller:
-            belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.CONTINUOUS,
-            intensity=vibration_intensity,
-            orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b110000,
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False
-            )
-            return 'diagonal right top', time_required
+        def diagonal_top_right():
+            start_time = time.time()
+            while time.time() - start_time < time_required:
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=90,  # Top
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=120,  # Right
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+        # Start diagonal vibration in a separate thread
+        Thread(target=diagonal_top_right).start()
+        return 'diagonal top right', time_required
     elif dx > 0 and dy < 0:
-        if belt_controller:
-            belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.CONTINUOUS,
-            intensity=vibration_intensity,
-            orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b101000,
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False
-            )
-            return 'diagonal right bottom', time_required
+        def diagonal_bottom_right():
+            start_time = time.time()
+            while time.time() - start_time < time_required:
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=60,  # Top
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=120,  # Right
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+        # Start diagonal vibration in a separate thread
+        Thread(target=diagonal_bottom_right).start()
+        return 'diagonal bottom right', time_required
     elif dx < 0 and dy > 0:
-        if belt_controller:
-            belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.CONTINUOUS,
-            intensity=vibration_intensity,
-            orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b010100,
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False
-            )
-            return 'diagonal left top', time_required
+        def diagonal_top_left():
+            start_time = time.time()
+            while time.time() - start_time < time_required:
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=90,  # Top
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=45,  
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+        # Start diagonal vibration in a separate thread
+        Thread(target=diagonal_top_left).start()
+        return 'diagonal top left', time_required
     elif dx < 0 and dy < 0:
-        if belt_controller:
-            belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.CONTINUOUS,
-            intensity=vibration_intensity,
-            orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b001100,
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False
-            )
-            return 'diagonal left bottom', time_required
+        def diagonal_bottom_left():
+            start_time = time.time()
+            while time.time() - start_time < time_required:
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=60, 
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+                if stop_event.is_set():
+                    break
+                belt_controller.send_vibration_command(
+                    channel_index=0,
+                    pattern=BeltVibrationPattern.SINGLE_SHORT,
+                    intensity=vibration_intensity,
+                    orientation_type=BeltOrientationType.ANGLE,
+                    orientation=45, 
+                    pattern_iterations=None,
+                    pattern_period=500,
+                    pattern_start_time=0,
+                    exclusive_channel=False,
+                    clear_other_channels=False
+                )
+        # Start diagonal vibration in a separate thread
+        Thread(target=diagonal_bottom_left).start()
+        return 'diagonal bottom left', time_required
     else:
         return 'none', 0
     
@@ -205,6 +284,7 @@ def simulate_tactile_feedback(shape, speed=1.5):
         end = vertices[i + 1]
         direction, time_required = calculate_direction_and_time(start, end, speed)
         if direction != 'none':
+            time.sleep(0.2)
             print(f"{direction} for {time_required:.2f} seconds")
             time.sleep(time_required) # Simulate the time required for the movement
             belt_controller.stop_vibration()
@@ -213,21 +293,24 @@ def simulate_tactile_feedback(shape, speed=1.5):
 
 # Define the categories and their items
 categories = {
-    'numbers': ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
-    'letters': ['a', 'b', 'c', 'd', 'e', 'f', 'h', 'i', 'j', 'l', 'p', 'q', 'u'],
-    'beta': ['k', 'm', 'n', 'r', 'v', 'w', 'y', 'z']
+    'numbers': ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+    'letters': ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'l', 'p', 'q', 's', 't', 'u'],
+    'beta': ['k', 'm', 'n', 'r', 'v', 'w', 'x', 'y', 'z']
 }
 
 # Shuffle the items within each category for each participant
 for category, items in categories.items():
     random.shuffle(items)
 
+total_figures = 0
+
 # Execute drawing tasks for each category sequentially
 for category, items in categories.items():
     print(f"Starting category: {category}\n")
     for index, item in enumerate(items):
         time.sleep(3)
-        print(item)
+        print(f'Start Now: {item}')
+        time.sleep(1)
         simulate_tactile_feedback(item)
         print("stop \n")
         if belt_controller:
@@ -245,12 +328,20 @@ for category, items in categories.items():
                 timer_option=BeltVibrationTimerOption.RESET_TIMER,
                 exclusive_channel=False,
                 clear_other_channels=False)
-        time.sleep(5)  # Pause after each shape
+        time.sleep(5)  # 5 second pause after each shape
 
-        # Add a 5-second rest after every 5 items within the category
-        #if (index + 1) % 5 == 0:
-        #    print("5-second rest \n")
-        #    time.sleep(5)
+        # one minutes pause after every 10 figures
+        total_figures += 1
+        if total_figures % 10 == 0:
+            print("Taking 1 minute pause")
+            time.sleep(60)
+
+        # Prompt the user to press 'Enter' to continue
+        print("Press 'Enter' to proceed to the next shape \n")
+        while True:
+            if keyboard.is_pressed('enter'):
+                break
+            time.sleep(0.5)
 
 belt_controller.disconnect_belt() if belt_controller else None
 sys.exit()
