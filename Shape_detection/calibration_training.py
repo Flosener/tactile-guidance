@@ -24,7 +24,7 @@ else:
     print('Error connecting bracelet. Aborting.')
     sys.exit()
 
-#belt_controller = None
+calibrated_intensity = None
 
 # Calibration function to determine optimal vibration intensity
 def display_intensity(intensity):
@@ -56,11 +56,11 @@ def get_user_input_for_calibration():
 def select_vibromotor():
     while True:
         print("\nSelect the vibromotor to calibrate:")
+        print("0. Finish calibration")
         print("1. Top")
         print("2. Right")
         print("3. Bottom")
         print("4. Left")
-        print("0. Finish calibration")
         choice = input("Enter the number corresponding to your choice: ")
         if choice == '1':
             return 90
@@ -76,6 +76,8 @@ def select_vibromotor():
             print("Invalid choice. Please select a valid option.")
 
 def calibrate_intensity(orientation):
+    global calibrated_intensity  # Declare that we are using the global variable
+
     intensity = int(input("Enter the initial intensity: "))
     print(f"Calibrating will start with initial intensity: {intensity}")
 
@@ -100,12 +102,12 @@ def calibrate_intensity(orientation):
     while True:
         display_intensity(intensity)
         print(f"Increment/Decrement step: {increment_step}")
-        print("Press 'up' to increment, 'down' to decrement, 'escp' to change step, 'right' to display intensity again, 'esc' to exit.")
+        print("Press 'up' to increment, 'down' to decrement, 'escp' to change step, 'right' to display intensity again, 'esc' to exit \n")
         
         while True:
             if keyboard.is_pressed('up'):
                 intensity += increment_step
-                time.sleep(0.1)  
+                #time.sleep(0.1)  
                 print(f"Incremented: {intensity}")
                 if belt_controller:
                     belt_controller.send_vibration_command(
@@ -119,11 +121,11 @@ def calibrate_intensity(orientation):
                         pattern_start_time=0,
                         exclusive_channel=False,
                         clear_other_channels=False)
-                time.sleep(2)
+                time.sleep(1.5)
                 belt_controller.stop_vibration()
             elif keyboard.is_pressed('down'):
                 intensity -= increment_step
-                time.sleep(0.1)  
+                #time.sleep(0.1)  
                 print(f"Decremented: {intensity}")
                 if belt_controller:
                     belt_controller.send_vibration_command(
@@ -137,15 +139,14 @@ def calibrate_intensity(orientation):
                         pattern_start_time=0,
                         exclusive_channel=False,
                         clear_other_channels=False)
-                time.sleep(2)
+                time.sleep(1.5)
                 belt_controller.stop_vibration()
             elif keyboard.is_pressed('left'):
-                print("Enter pressed. Set new increment/decrement step:")
                 increment_step = get_step_value()
                 break
             elif keyboard.is_pressed('right'):
                 display_intensity(intensity)
-                time.sleep(0.1)  # Small delay to avoid multiple prints in one press
+                #time.sleep(0.1)  # Small delay to avoid multiple prints in one press
                 if belt_controller:
                     belt_controller.send_vibration_command(
                         channel_index=0,
@@ -158,10 +159,10 @@ def calibrate_intensity(orientation):
                         pattern_start_time=0,
                         exclusive_channel=False,
                         clear_other_channels=False)
-                time.sleep(2)
+                time.sleep(1.5)
                 belt_controller.stop_vibration()
             elif keyboard.is_pressed('esc'):  # Using 'esc' to exit the loop
-                print("Exiting loop.")
+                print("Exiting loop \n")
                 if belt_controller:
                     belt_controller.stop_vibration()
                     belt_controller.send_pulse_command(
@@ -180,13 +181,13 @@ def calibrate_intensity(orientation):
                 
                 # Get four user inputs and calculate average
                 user_inputs = get_user_input_for_calibration()
-                intensity = int(sum(user_inputs) / len(user_inputs))
-                print(f'User-calibrated intensity: {intensity:.2f}')
+                calibrated_intensity = int(sum(user_inputs) / len(user_inputs))
+                print(f'User-calibrated intensity: {calibrated_intensity:.2f}')
                 if belt_controller:
                     belt_controller.send_vibration_command(
                         channel_index=0,
                         pattern=BeltVibrationPattern.CONTINUOUS,
-                        intensity=intensity,
+                        intensity=calibrated_intensity,
                         orientation_type=BeltOrientationType.ANGLE,
                         orientation=orientation,  # down
                         pattern_iterations=None,
@@ -196,11 +197,10 @@ def calibrate_intensity(orientation):
                         clear_other_channels=False)                
                 time.sleep(2)
                 belt_controller.stop_vibration()
-                return intensity
+                return 
 
 def main_calibration_process():
     global calibrated_intensity
-    calibrated_intensity = None  # Initialize as None to indicate it hasn't been set yet
 
     while True:
         orientation = select_vibromotor()
@@ -396,11 +396,6 @@ def vibrate_direction(direction, stop_event):
     belt_controller.stop_vibration()
 
 
-# Calibrate the bracelet intensity
-calibrated_intensity = calibrate_intensity()
-print(f'Calibrated intensity: {calibrated_intensity}')
-#calibrated_intensity = 80
-
 # Directions for training
 directions = ['top', 'down', 'right', 'left', 'top right', 'bottom right', 'top left', 'bottom left']
 
@@ -441,15 +436,13 @@ def familiarization_phase():
     print("\nFamiliarization Phase")
     time.sleep(10)
     
-    for direction in directions:
-        stop_event = threading.Event()  # Event to stop vibration
-        
-        # Start the vibration in a separate thread
-        vibration_thread = threading.Thread(target=vibrate_direction, args=(direction, stop_event))
-        vibration_thread.start()
-        
+    for direction in directions:        
         while True:
+            stop_event = threading.Event()  # Event to stop vibration
             print(f"Vibrating for {direction}.")
+            # Start the vibration in a separate thread
+            vibration_thread = threading.Thread(target=vibrate_direction, args=(direction, stop_event))
+            vibration_thread.start()
             user_response = capture_direction()
             print(f"User response: {user_response}")
             stop_event.set()  # Signal the vibration thread to stop
