@@ -24,7 +24,7 @@ else:
     print('Error connecting bracelet. Aborting.')
     sys.exit()
 
-calibrated_intensity = None
+#calibrated_intensity = None
 
 # Calibration function to determine optimal vibration intensity
 def display_intensity(intensity):
@@ -197,10 +197,11 @@ def calibrate_intensity(orientation):
                         clear_other_channels=False)                
                 time.sleep(2)
                 belt_controller.stop_vibration()
-                return 
+                return calibrated_intensity  
 
 def main_calibration_process():
     global calibrated_intensity
+    calibrated_intensity = None
 
     while True:
         orientation = select_vibromotor()
@@ -211,6 +212,9 @@ def main_calibration_process():
             calibrated_intensity = calibrate_intensity(orientation)
             print("Calibration for this vibromotor is complete.")
             time.sleep(1)  # Small delay before asking to calibrate another vibromotor
+    
+    print(f'Final calibrated intensity: {calibrated_intensity}')  # Print after all calibrations are done
+
 
 stop_event = threading.Event()
 
@@ -638,6 +642,8 @@ def visualize_confusion_matrix(excel_file_path):
 if __name__ == "__main__":
     main_calibration_process()
     
+    print(calibrated_intensity)
+
     # Run familiarization phase
     familiarization_phase()
 
