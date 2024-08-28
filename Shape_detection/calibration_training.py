@@ -231,7 +231,7 @@ def staircase_method(orientation):
     Perform the staircase method to determine the threshold intensity for the given orientation.
     """
     initial_value = 100
-    step_sizes = [32, 16, 8, 4, 2, 1]
+    step_sizes = [64, 32, 16, 8, 4, 2, 1]
     step_size_index = 0
     step_size = step_sizes[step_size_index]
     current_value = initial_value
@@ -824,11 +824,15 @@ def main_calibration_process():
 
 def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int):
     directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-    all_set_accuracies = []
-    all_block_accuracies = []
     time.sleep(10)
+    print("Press 'Enter' to proceed to the next shape \n")
+    while True:
+        if keyboard.is_pressed('enter'):
+            break
     print("\nTraining Task will start")
     
+    all_set_accuracies = []
+    all_block_accuracies = []
     max_sets = 3  # Maximum number of sets allowed
     set_count = 0  # Counter for the number of sets
     all_set_results = {}
