@@ -154,7 +154,7 @@ def preference_test():
     interval_vibration_thread.start()
 
     # Wait for user input or ESC key press
-    input("Press Enter to switch to the next pattern...")
+    input("Press Enter to switch to the next pattern")
     
     # Stop interval vibration and start simultaneous pattern
     stop_event.set()
@@ -168,7 +168,7 @@ def preference_test():
     simultaneous_vibration_thread.start()
 
     # Wait for user input or ESC key press
-    input("Press Enter to end the test and choose your preference...")
+    input("Press Enter to end the test and choose your preference")
 
     stop_event.set()
     simultaneous_vibration_thread.join()
@@ -823,119 +823,132 @@ def main_calibration_process():
     return  preference, int_top, int_bottom, int_right, int_left, avg_int 
 
 def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int):
+    directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+    all_set_accuracies = []
+    all_block_accuracies = []
     time.sleep(10)
     print("\nTraining Task will start")
     
-    correct_responses_per_block = []
-    blocks = 3
-    trials_per_block = 16
-    block_accuracies = []
+    max_sets = 3  # Maximum number of sets allowed
+    set_count = 0  # Counter for the number of sets
+    all_set_results = {}
 
-    block_results = {}
-    combined_results = {
-        'Trial' : [],
-        'Block' : [],
-        'Actual Direction' : [],
-        'Predicted Direction' : [],
-        'Response Time (s)' : []
-    }
+    for set_count in range(1, max_sets + 1):
+        print(f"\nStarting Training Set {set_count}")
+        correct_responses_per_block = []
+        blocks = 3
+        trials_per_block = 16
+        block_accuracies = []
+        block_results = {}
+        combined_results = {
+            'Trial' : [],
+            'Block' : [],
+            'Actual Direction' : [],
+            'Predicted Direction' : [],
+            'Response Time (s)' : []
+        }
+        for block in range(blocks):
+            correct_responses = 0
+            time.sleep(5)
 
-    for block in range(blocks):
-        correct_responses = 0
-        time.sleep(5)
+            # Create a list with two of each direction and shuffle it
+            block_directions = directions * 2
+            random.shuffle(block_directions)
 
-        # Create a list with two of each direction and shuffle it
-        block_directions = directions * 2
-        random.shuffle(block_directions)
+            actual_directions =[]
+            predicted_directions = []
+            response_times = []
+            trial_numbers = []
 
-        actual_directions =[]
-        predicted_directions = []
-        response_times = []
-        trial_numbers = []
+            for trial_num, direction in enumerate(block_directions[:trials_per_block], start = 1):
+                print(f"Trial {trial_num}: Vibration direction is {direction}.")
+                
+                # Setup for vibration
+                stop_event = threading.Event()  # Event to stop vibration
+                vibration_thread = threading.Thread(
+                    target=vibrate_direction,
+                    args=(direction, stop_event, preference, int_top, int_bottom, int_right, int_left, avg_int))
+                vibration_thread.start()
+                
+                start_time = time.time()
+                user_response = capture_direction()
+                end_time = time.time()
+                response_time = end_time - start_time
 
-        for trial_num, direction in enumerate(block_directions[:trials_per_block], start = 1):
-            print(f"Trial {trial_num}: Vibration direction is {direction}.")
+                print(f"User response: {user_response}")
+                stop_event.set()  # Signal the vibration thread to stop
+                vibration_thread.join()  # Wait for the vibration thread to stop
+                belt_controller.stop_vibration()
+                time.sleep(1)
+
+                trial_numbers.append(trial_num)
+                actual_directions.append(direction)
+                predicted_directions.append(user_response)
+                response_times.append(response_time)
+
+                # Add to combined results
+                combined_results['Trial'].append(trial_num)
+                combined_results['Block'].append(block + 1)
+                combined_results['Actual Direction'].append(direction)
+                combined_results['Predicted Direction'].append(user_response)
+                combined_results['Response Time (s)'].append(response_time)
+
+                if user_response == direction:
+                    correct_responses += 1
+
+                # Store the results for the current block
+                block_results[f'Block {block + 1}'] = {
+                    'Trial': trial_numbers,
+                    'Actual Direction': actual_directions, 
+                    'Predicted Direction': predicted_directions,
+                    'Response Time (s)': response_times
+                }   
+
+            # Stop vibration after completing a block with custom stop signal
+            if belt_controller:
+                belt_controller.stop_vibration()
+                belt_controller.send_pulse_command(
+                    channel_index=0,
+                    orientation_type=BeltOrientationType.BINARY_MASK,
+                    orientation=0b111100,
+                    intensity=avg_int,
+                    on_duration_ms=150,
+                    pulse_period=500,
+                    pulse_iterations=5, 
+                    series_period=5000,
+                    series_iterations=1,
+                    timer_option=BeltVibrationTimerOption.RESET_TIMER,
+                    exclusive_channel=False,
+                    clear_other_channels=False)
+                
+            # Calculate accuracy for the block
+            block_accuracy = (correct_responses / trials_per_block) * 100
+            block_accuracies.append(block_accuracy)
+            correct_responses_per_block.append(correct_responses)
+            print(f"Block {block + 1} complete. Accuracy: {block_accuracy:.2f}%\n")
             
-            # Setup for vibration
-            stop_event = threading.Event()  # Event to stop vibration
-            vibration_thread = threading.Thread(
-                target=vibrate_direction,
-                args=(direction, stop_event, preference, int_top, int_bottom, int_right, int_left, avg_int)
-            )
-            vibration_thread.start()
-            
-            start_time = time.time()
-            user_response = capture_direction()
-            end_time = time.time()
-            response_time = end_time - start_time
+        # Calculate and store the average accuracy for the set
+        set_average_accuracy = np.mean(block_accuracies)
+        all_set_accuracies.append(set_average_accuracy)
+        all_block_accuracies.append(block_accuracies)
+        print(f"Set {set_count} average accuracy: {set_average_accuracy:.2f}%")
 
-            print(f"User response: {user_response}")
-            stop_event.set()  # Signal the vibration thread to stop
-            vibration_thread.join()  # Wait for the vibration thread to stop
-            belt_controller.stop_vibration()
-            time.sleep(1)
+        # Save results for the set
+        all_set_results[f'Set {set_count}'] = combined_results
 
-            trial_numbers.append(trial_num)
-            actual_directions.append(direction)
-            predicted_directions.append(user_response)
-            response_times.append(response_time)
-
-            # Add to combined results
-            combined_results['Trial'].append(trial_num)
-            combined_results['Block'].append(block + 1)
-            combined_results['Actual Direction'].append(direction)
-            combined_results['Predicted Direction'].append(user_response)
-            combined_results['Response Time (s)'].append(response_time)
-
-            if user_response == direction:
-                correct_responses += 1
-
-            # Store the results for the current block
-            block_results[f'Block {block + 1}'] = {
-                'Trial': trial_numbers,
-                'Actual Direction': actual_directions, 
-                'Predicted Direction': predicted_directions,
-                'Response Time (s)': response_times
-            }   
-
-        # Stop vibration after completing a block with custom stop signal
-        if belt_controller:
-            belt_controller.stop_vibration()
-            belt_controller.send_pulse_command(
-                channel_index=0,
-                orientation_type=BeltOrientationType.BINARY_MASK,
-                orientation=0b111100,
-                intensity=calibrated_intensity,
-                on_duration_ms=150,
-                pulse_period=500,
-                pulse_iterations=5, 
-                series_period=5000,
-                series_iterations=1,
-                timer_option=BeltVibrationTimerOption.RESET_TIMER,
-                exclusive_channel=False,
-                clear_other_channels=False)
-            
-        # Calculate accuracy for the block
-        block_accuracy = (correct_responses / trials_per_block) * 100
-        block_accuracies.append(block_accuracy)
-        correct_responses_per_block.append(correct_responses)
-        print(f"Block {block + 1} complete. Accuracy: {block_accuracy:.2f}%\n")
-        
-    # Calculate and display the average accuracy across all blocks
-    average_accuracy = np.mean(block_accuracies)
-    print(f"Selected intensity after training: {calibrated_intensity}")
-    print(f"Block accuracy: {block_accuracies}")
-
-    # Determine if the training accuracy is sufficient
-    if average_accuracy >= 90:
-        print(f"Training completed with an accuracy of {average_accuracy:.2f}%")
-    else: 
-        print(f"Training accuracy below 90% with an accuracy of {average_accuracy:.2f}%")
-
-
+        # Determine if the training accuracy is sufficient
+        if set_average_accuracy >= 90:
+            print(f"Training completed with an accuracy of {set_average_accuracy:.2f}%")
+            break
+        else: 
+            print(f"Training accuracy below 90% with an accuracy of {set_average_accuracy:.2f}%")
+            set_count +=1
+    
+    if set_count == max_sets and all_set_accuracies < 90:
+        print("Maximum sets reached, but training accuracy is still below 90%.")
+              
     # Save result to .txt file
     #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-    directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     file_path = f"{directory}training_result_{participant_ID}.txt"
     with open(file_path, 'w') as file:  
         file.write(f"Participant ID: {participant_ID}\n")
@@ -943,57 +956,49 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
         file.write(f"Intensity for top and bottom: {int_top}\n")
         file.write(f"Intensity for right and left: {int_left}\n")
         file.write(f"Average intensity: {avg_int}\n")
-        file.write(f"Block accuracy: {block_accuracies}\n")
-        file.write(f"Training completed with an average accuracy of {average_accuracy:.2f}%\n")
-    print('\nResults saved to {file_path}')
+        file.write(f"Training task: {set_count} set/sets\n")
+        for i, accuracies in enumerate(all_block_accuracies, start=1):
+            file.write(f"\nSet {i} block accuracies: {accuracies}\n")
+            file.write(f"Set {i} average accuracy: {all_set_accuracies[i-1]:.2f}%\n")
+        file.write(f"\nOverall training completed with an average accuracy of {np.mean(all_set_accuracies):.2f}%\n")
+    print(f'\nResults saved to {file_path}')
 
     # Excel output
     #with pd.ExcelWriter('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx') as writer:
-    with pd.ExcelWriter('D:/WWU/M8 - Master Thesis/Project/Code/training_result.xlsx') as writer:
-        # Write the combined results to the first sheet
-        combined_df = pd.DataFrame(combined_results)
-        combined_df.to_excel(writer, sheet_name='All Blocks', index=False)
-        
-        # Write each block's results to subsequent sheets
-        for block_name, data in block_results.items():
-            df = pd.DataFrame(data)
-            df.to_excel(writer, sheet_name=block_name, index=False)
-    
-    #result = {'Actual Direction': actual_directions,
-    #     'Predicted Direction': predicted_directions,
-    #     'Response Time (s)': response_times}
-    #df = pd.DataFrame(data=result)
-    #df.to_excel("C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx")
+    with pd.ExcelWriter(f'D:/WWU/M8 - Master Thesis/Project/Code/training_result_{participant_ID}.xlsx') as writer:
+        # Write each set's results to its own sheet
+        for set_name, results in all_set_results.items():
+            df = pd.DataFrame(results)
+            df.to_excel(writer, sheet_name=set_name, index=False)
 
     return
     #return average_accuracy, block_accuracies, actual_directions, predicted_directions
 
-def visualize_confusion_matrix(excel_file_path):
-    # Load the first sheet from the Excel file
-    df = pd.read_excel(sheet_name='All Blocks')
+def visualize_confusion_matrix(excel_file_path, participant_ID):
+    # Load the Excel file
+    with pd.ExcelFile(excel_file_path) as xls:
+        # Iterate over each sheet in the Excel file
+        for sheet_name in xls.sheet_names:
+            # Load the data from the current sheet
+            df = pd.read_excel(xls, sheet_name=sheet_name)
 
-    #print(df)
+            # Extract the actual and predicted directions
+            actual_directions = df['Actual Direction']
+            predicted_directions = df['Predicted Direction']
 
-    # Extract the actual and predicted directions
-    actual_directions = df['Actual Direction']
-    predicted_directions = df['Predicted Direction']
+            # Compute the confusion matrix
+            cm = confusion_matrix(actual_directions, predicted_directions)
 
-    # Compute the confusion matrix
-    cm = confusion_matrix(actual_directions, predicted_directions)
-
-    #print(cm)
-
-    # Plot the confusion matrix using Seaborn
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
-                xticklabels=df['Actual Direction'].unique(),
-                yticklabels=df['Actual Direction'].unique())
-    plt.xlabel('Predicted Direction')
-    plt.ylabel('Actual Direction')
-    plt.title('Confusion Matrix of Actual vs. Predicted Directions')
-    plt.show()
-    plt.savefig('D:/WWU/M8 - Master Thesis/Project/Code/confusion_matrix.jpg')
-
+            # Plot the confusion matrix using Seaborn
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                        xticklabels=df['Actual Direction'].unique(),
+                        yticklabels=df['Actual Direction'].unique())
+            plt.xlabel('Predicted Direction')
+            plt.ylabel('Actual Direction')
+            plt.title(f'Confusion Matrix of Actual vs. Predicted Directions_{participant_ID}_{sheet_name}')
+            plt.show()
+            #plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/confusion_matrix_{participant_ID}_{sheet_name}.jpg')
 
 if __name__ == "__main__":
     participant_ID = input("Enter Participant ID: ")	
@@ -1006,7 +1011,7 @@ if __name__ == "__main__":
 
     # Run confusion matrix
     #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx')
-    visualize_confusion_matrix('D:/WWU/M8 - Master Thesis/Project/Code/training_result.xlsx')
+    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_result_{participant_ID}.xlsx', participant_ID)
 
     belt_controller.disconnect_belt() if belt_controller else None
     sys.exit()
