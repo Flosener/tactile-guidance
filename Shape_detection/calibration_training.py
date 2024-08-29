@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import random
 import time
 import sys
@@ -321,7 +322,7 @@ def staircase_method(orientation):
 
     plt.xlabel('Trials')
     plt.ylabel('Value')
-    plt.title('Staircase Method')
+    plt.title(f'Staircase Method_{orientation}')
     plt.legend()
     plt.grid(True)
     plt.savefig(f'{participant_ID}_{orientation}_calibration')
@@ -825,7 +826,7 @@ def main_calibration_process():
 def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int):
     directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     time.sleep(10)
-    print("Press 'Enter' to proceed to the next shape \n")
+    print("Press 'Enter' to proceed the training task \n")
     while True:
         if keyboard.is_pressed('enter'):
             break
@@ -1004,6 +1005,22 @@ def visualize_confusion_matrix(excel_file_path, participant_ID):
             plt.show()
             #plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/confusion_matrix_{participant_ID}_{sheet_name}.jpg')
 
+def save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int):
+    directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+    file_path = os.path.join(directory, f'intensity_{participant_ID}.txt')
+    calibration_data = (
+        f"preference: {preference}\n"
+        f"int_top: {int_top}\n"
+        f"int_bottom: {int_bottom}\n"
+        f"int_left: {int_left}\n"
+        f"int_right: {int_right}\n"
+        f"avg_int: {avg_int}\n")
+    
+    # Save values to the text file
+    with open(file_path, 'w') as file:
+        file.write(calibration_data)
+    print(f"Calibration data saved to {file_path}")
+
 if __name__ == "__main__":
     participant_ID = input("Enter Participant ID: ")	
 
@@ -1016,6 +1033,7 @@ if __name__ == "__main__":
     # Run confusion matrix
     #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx')
     visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_result_{participant_ID}.xlsx', participant_ID)
+    save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int)
 
     belt_controller.disconnect_belt() if belt_controller else None
     sys.exit()
