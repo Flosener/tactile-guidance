@@ -70,67 +70,6 @@ def capture_direction():
                 return 'bottom left'
             return 'left'
 
-def interval_vibration():
-    """
-    Function to run interval vibration pattern until stopped.
-    """
-    while not stop_event.is_set():
-        calibrated_intensity = 100
-        belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.SINGLE_SHORT,
-            intensity=calibrated_intensity,
-            orientation_type=BeltOrientationType.ANGLE,
-            orientation=60,  # down
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False)
-        
-        if stop_event.is_set():
-            break
-        
-        belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.SINGLE_SHORT,
-            intensity=calibrated_intensity,
-            orientation_type=BeltOrientationType.ANGLE,
-            orientation=120,  
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False)
-        
-        if stop_event.is_set():
-            break
-        
-    belt_controller.stop_vibration()
-
-def simultaneous_vibration():
-    """
-    Function to run simultaneous vibration pattern until stopped.
-    """
-    while not stop_event.is_set():
-        calibrated_intensity = 100
-        belt_controller.send_vibration_command(
-            channel_index=0,
-            pattern=BeltVibrationPattern.CONTINUOUS,
-            intensity=calibrated_intensity,
-            orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b101000,  # Combination of orientations
-            pattern_iterations=None,
-            pattern_period=500,
-            pattern_start_time=0,
-            exclusive_channel=False,
-            clear_other_channels=False)
-        
-        if stop_event.is_set():
-            break
-
-    belt_controller.stop_vibration()
-
 def start_key_listener(stop_event):
     """
     Start the ESC key listener thread.
@@ -139,50 +78,6 @@ def start_key_listener(stop_event):
     key_listener_thread.daemon = True  # Ensure the thread exits with the main program
     key_listener_thread.start()
 
-def preference_test():
-    """
-    Run the preference test for vibration patterns.
-    """
-    print("\nYou will now experience two vibration patterns.")
-    time.sleep(2)
-    print("Pattern 1: Interval")
-    time.sleep(1)
-    # Start the ESC key listener
-    start_key_listener(stop_event)
-
-    # Start interval vibration pattern
-    interval_vibration_thread = threading.Thread(target=interval_vibration)
-    interval_vibration_thread.start()
-
-    # Wait for user input or ESC key press
-    input("Press Enter to switch to the next pattern")
-    
-    # Stop interval vibration and start simultaneous pattern
-    stop_event.set()
-    interval_vibration_thread.join()
-    
-    stop_event.clear()  # Reset stop event for the next pattern
-    
-    print("Pattern 2: Simultaneous")
-    time.sleep(1)
-    simultaneous_vibration_thread = threading.Thread(target=simultaneous_vibration)
-    simultaneous_vibration_thread.start()
-
-    # Wait for user input or ESC key press
-    input("Press Enter to end the test and choose your preference")
-
-    stop_event.set()
-    simultaneous_vibration_thread.join()
-
-    # Ask for user preference
-    while True:
-        preference = input("\nWhich vibration pattern did you prefer? Enter '1' for Interval or '2' for Simultaneous: ")
-        if preference == '1':
-            return 'Interval'
-        elif preference == '2':
-            return 'Simultaneous'
-        else:
-            print("Invalid input. Please enter '1' or '2'.")
 
 # Calibration function to determine optimal vibration intensity
 def display_intensity(intensity):
@@ -329,7 +224,7 @@ def staircase_method(orientation):
     plt.title(f'Staircase Method_{orientation}')
     plt.legend()
     plt.grid(True)
-    plt.savefig(f'{participant_ID}_{orientation}_calibration')
+    plt.savefig(f'{participant_ID}_{orientation}_alpha')
 
     return threshold
 
@@ -361,303 +256,69 @@ def calibrate_intensity(orientation):
     return calibrated_intensity
 
 # Function to send vibration for a given direction
-def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, int_right, int_left, avg_int):
+def vibrate_direction(direction, stop_event, int_top, int_bottom, int_right, int_left):
     # Check if belt_controller is initialized
     if not belt_controller:
         print("Error: Belt controller not initialized.")
         return
 
-    try:      
-        if preference == 'Interval':
-            while not stop_event.is_set():
-                if direction == 'top':
-                    belt_controller.send_vibration_command(
-                        channel_index=0,
-                        pattern=BeltVibrationPattern.CONTINUOUS,
-                        intensity=int_top,
-                        orientation_type=BeltOrientationType.ANGLE,
-                        orientation=90,  # Top
-                        pattern_iterations=None,
-                        pattern_period=500,
-                        pattern_start_time=0,
-                        exclusive_channel=False,
-                        clear_other_channels=False)
-                elif direction == 'down':
-                    belt_controller.send_vibration_command(
-                        channel_index=0,
-                        pattern=BeltVibrationPattern.CONTINUOUS,
-                        intensity=int_bottom,
-                        orientation_type=BeltOrientationType.ANGLE,
-                        orientation=60,  # Down
-                        pattern_iterations=None,
-                        pattern_period=500,
-                        pattern_start_time=0,
-                        exclusive_channel=False,
-                        clear_other_channels=False)
-                elif direction == 'right':
-                    belt_controller.send_vibration_command(
-                        channel_index=0,
-                        pattern=BeltVibrationPattern.CONTINUOUS,
-                        intensity=int_right,
-                        orientation_type=BeltOrientationType.ANGLE,
-                        orientation=120,  # Right
-                        pattern_iterations=None,
-                        pattern_period=500,
-                        pattern_start_time=0,
-                        exclusive_channel=False,
-                        clear_other_channels=False)
-                elif direction == 'left':
-                    belt_controller.send_vibration_command(
-                        channel_index=0,
-                        pattern=BeltVibrationPattern.CONTINUOUS,
-                        intensity=int_left,
-                        orientation_type=BeltOrientationType.ANGLE,
-                        orientation=45,  # Left
-                        pattern_iterations=None,
-                        pattern_period=500,
-                        pattern_start_time=0,
-                        exclusive_channel=False,
-                        clear_other_channels=False)
-                elif direction == 'top right':
-                    while not stop_event.is_set():
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_top,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=90,  # Top
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        #time.sleep(0.25)  # Delay between vibrations
-                        if stop_event.is_set():
-                            break
-                        belt_controller.send_vibration_command(
-                            channel_index=1,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_right,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=120,  # Right
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        #time.sleep(0.25)  # Delay between vibrations
-                        if stop_event.is_set():
-                            break
-                elif direction == 'top left':
-                    while not stop_event.is_set():
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_top,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=90,  # Top
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
-                        if stop_event.is_set():
-                            break
-                        belt_controller.send_vibration_command(
-                            channel_index=1,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_left,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=45,  # Left
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                elif direction == 'bottom right':
-                    while not stop_event.is_set():
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_bottom,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=60,  # Down
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
-                        if stop_event.is_set():
-                            break
-                        belt_controller.send_vibration_command(
-                            channel_index=1,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_right,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=120,  # Right
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                elif direction == 'bottom left':
-                    while not stop_event.is_set():
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_bottom,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=60,  # Down
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
-                        if stop_event.is_set():
-                            break
-                        belt_controller.send_vibration_command(
-                            channel_index=1,
-                            pattern=BeltVibrationPattern.SINGLE_SHORT,
-                            intensity=int_left,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=45,  # Left
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                else:
-                    print(f"Direction '{direction}' not recognized.")
-                    break
+    try:
+        if direction == 'top':
+            belt_controller.send_vibration_command(
+                channel_index=0,
+                pattern=BeltVibrationPattern.CONTINUOUS,
+                intensity=int_top,
+                orientation_type=BeltOrientationType.ANGLE,
+                orientation=90,  # Top
+                pattern_iterations=None,
+                pattern_period=500,
+                pattern_start_time=0,
+                exclusive_channel=False,
+                clear_other_channels=False)
+        elif direction == 'down':
+            belt_controller.send_vibration_command(
+                channel_index=0,
+                pattern=BeltVibrationPattern.CONTINUOUS,
+                intensity=int_bottom,
+                orientation_type=BeltOrientationType.ANGLE,
+                orientation=60,  # Down
+                pattern_iterations=None,
+                pattern_period=500,
+                pattern_start_time=0,
+                exclusive_channel=False,
+                clear_other_channels=False)
+        elif direction == 'right':
+            belt_controller.send_vibration_command(
+                channel_index=0,
+                pattern=BeltVibrationPattern.CONTINUOUS,
+                intensity=int_right,
+                orientation_type=BeltOrientationType.ANGLE,
+                orientation=120,  # Right
+                pattern_iterations=None,
+                pattern_period=500,
+                pattern_start_time=0,
+                exclusive_channel=False,
+                clear_other_channels=False)
+        elif direction == 'left':
+            belt_controller.send_vibration_command(
+                channel_index=0,
+                pattern=BeltVibrationPattern.CONTINUOUS,
+                intensity=int_left,
+                orientation_type=BeltOrientationType.ANGLE,
+                orientation=45,  # Left
+                pattern_iterations=None,
+                pattern_period=500,
+                pattern_start_time=0,
+                exclusive_channel=False,
+                clear_other_channels=False)
+        else:
+            print(f"Direction '{direction}' not recognized.")
+            return
 
-        elif preference == 'Simultaneous':
-                while not stop_event.is_set():
-                    if direction == 'top':
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=int_top,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=90,  # Top
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'down':
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=int_bottom,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=60,  # Down
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'right':
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=int_right,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=120,  # Right
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'left':
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=int_left,
-                            orientation_type=BeltOrientationType.ANGLE,
-                            orientation=45,  # Left
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'top right':
-                        belt_controller.send_vibration_command(            
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=avg_int,
-                            orientation_type=BeltOrientationType.BINARY_MASK,
-                            orientation=0b110000,
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'bottom right':
-                        belt_controller.send_vibration_command(
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=avg_int,
-                            orientation_type=BeltOrientationType.BINARY_MASK,
-                            orientation=0b101000,
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'top left':
-                        belt_controller.send_vibration_command(           
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=avg_int,
-                            orientation_type=BeltOrientationType.BINARY_MASK,
-                            orientation=0b010100,
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    elif direction == 'bottom left':
-                        belt_controller.send_vibration_command(            
-                            channel_index=0,
-                            pattern=BeltVibrationPattern.CONTINUOUS,
-                            intensity=avg_int,
-                            orientation_type=BeltOrientationType.BINARY_MASK,
-                            orientation=0b001100,
-                            pattern_iterations=None,
-                            pattern_period=500,
-                            pattern_start_time=0,
-                            exclusive_channel=False,
-                            clear_other_channels=False)
-                        if stop_event.is_set():
-                            break
-                    else:
-                        print(f"Direction '{direction}' not recognized.")
-                        return
+        # Keep vibrating until the stop event is set
+        while not stop_event.is_set():
+            time.sleep(0.1)
 
-    
     except Exception as e:
         print(f"Exception occurred: {e}")
     finally:
@@ -665,10 +326,10 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
         belt_controller.stop_vibration()
 
 # Directions for training
-directions = ['top', 'down', 'right', 'left', 'top right', 'bottom right', 'top left', 'bottom left']
+directions = ['top', 'down', 'right', 'left']
 
 # Familiarization phase
-def familiarization_phase(preference, int_top, int_bottom, int_right, int_left, avg_int):
+def familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int):
     print("\nFamiliarization Phase")
     time.sleep(3)
     
@@ -680,7 +341,7 @@ def familiarization_phase(preference, int_top, int_bottom, int_right, int_left, 
             # Start the vibration in a separate thread
             vibration_thread = threading.Thread(
                 target=vibrate_direction,
-                args=(direction, stop_event, preference, int_top, int_bottom, int_right, int_left, avg_int)
+                args=(direction, stop_event, int_top, int_bottom, int_right, int_left)
             )
             vibration_thread.start()
             user_response = capture_direction()
@@ -700,7 +361,7 @@ def familiarization_phase(preference, int_top, int_bottom, int_right, int_left, 
         belt_controller.send_pulse_command(
             channel_index=0,
             orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b111100,
+            orientation=0b1111,
             intensity=avg_int,
             on_duration_ms=150,
             pulse_period=500,
@@ -729,9 +390,6 @@ def main_calibration_process():
     """
     Main control loop to orchestrate the steps.
     """
-    # Preference Test
-    preference = preference_test()
-    print(f"Selected preference: {preference}")  
 
     intensities = {
         90: None,  # Top
@@ -786,7 +444,7 @@ def main_calibration_process():
                 int_top = int_bottom = avg_int = int_right
 
             # Start familiarization phase with the selected intensity
-            familiarization_phase(preference, int_top, int_bottom, int_right, int_left, avg_int)
+            familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int)
 
 
         # Ask if intensity is good
@@ -825,9 +483,9 @@ def main_calibration_process():
             print("Repeating calibration and familiarization for the selected motor.")
             continue
 
-    return  preference, int_top, int_bottom, int_right, int_left, avg_int 
+    return  int_top, int_bottom, int_right, int_left, avg_int 
 
-def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int):
+def training_task(int_top, int_bottom, int_right, int_left, avg_int):
     directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     time.sleep(10)
     print("\nPress 'Enter' to proceed the training task")
@@ -861,7 +519,7 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
             time.sleep(5)
 
             # Create a list with two of each direction and shuffle it
-            block_directions = directions * 2
+            block_directions = directions * 4
             random.shuffle(block_directions)
 
             actual_directions =[]
@@ -876,7 +534,7 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
                 stop_event = threading.Event()  # Event to stop vibration
                 vibration_thread = threading.Thread(
                     target=vibrate_direction,
-                    args=(direction, stop_event, preference, int_top, int_bottom, int_right, int_left, avg_int))
+                    args=(direction, stop_event, int_top, int_bottom, int_right, int_left))
                 vibration_thread.start()
                 
                 start_time = time.time()
@@ -963,10 +621,9 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
               
     # Save result to .txt file
     #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-    file_path = f"{directory}training_result_{participant_ID}.txt"
+    file_path = f"{directory}training_alpha_{participant_ID}.txt"
     with open(file_path, 'w') as file:  
         file.write(f"Participant ID: {participant_ID}\n")
-        file.write(f"Diagonal pattern: {preference}\n")
         file.write(f"Intensity for top and bottom: {int_top}\n")
         file.write(f"Intensity for right and left: {int_left}\n")
         file.write(f"Average intensity: {avg_int}\n")
@@ -978,8 +635,8 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
     print(f'\nResults saved to {file_path}')
 
     # Excel output
-    #with pd.ExcelWriter('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx') as writer:
-    with pd.ExcelWriter(f'D:/WWU/M8 - Master Thesis/Project/Code/training_result_{participant_ID}.xlsx') as writer:
+    #with pd.ExcelWriter('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha.xlsx') as writer:
+    with pd.ExcelWriter(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx') as writer:
         # Write each set's results to its own sheet
         for set_name, results in all_set_results.items():
             df = pd.DataFrame(results)
@@ -1014,11 +671,10 @@ def visualize_confusion_matrix(excel_file_path, participant_ID):
             plt.show()
             #plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/confusion_matrix_{participant_ID}_{sheet_name}.jpg')
 
-def save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int):
+def save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int):
     directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-    file_path = os.path.join(directory, f'intensity_{participant_ID}.txt')
+    file_path = os.path.join(directory, f'intensity alpha_{participant_ID}.txt')
     calibration_data = (
-        f"preference: {preference}\n"
         f"int_top: {int_top}\n"
         f"int_bottom: {int_bottom}\n"
         f"int_left: {int_left}\n"
@@ -1034,15 +690,15 @@ if __name__ == "__main__":
     participant_ID = input("Enter Participant ID: ")	
 
     # Calibration 
-    preference, int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
+    int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
 
     # Training task
-    training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
+    training_task(int_top, int_bottom, int_right, int_left, avg_int)
 
     # Run confusion matrix
-    #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_result.xlsx')
-    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_result_{participant_ID}.xlsx', participant_ID)
-    save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int)
+    #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha.xlsx')
+    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx', participant_ID)
+    save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int)
 
     belt_controller.disconnect_belt() if belt_controller else None
     sys.exit()
