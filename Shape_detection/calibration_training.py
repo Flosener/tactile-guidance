@@ -265,6 +265,8 @@ def staircase_method(orientation):
                     print(f"\nDirection changed to 'up'. New step size: {step_size}")
                 direction = 'up'
                 current_value += step_size
+                if current_value > 100:  # Ensure it doesn't go above 100
+                    current_value = 100
                 values.append(current_value)
                 print(f"Increasing by {step_size}. New value: {current_value}")
 
@@ -279,6 +281,8 @@ def staircase_method(orientation):
                     print(f"\nDirection changed to 'down'. New step size: {step_size}")
                 direction = 'down'
                 current_value -= step_size
+                if current_value < 0:  # Ensure it doesn't go below 0
+                    current_value = 0
                 values.append(current_value)
                 print(f"Decreasing by {step_size}. New value: {current_value}")
 
@@ -826,11 +830,11 @@ def main_calibration_process():
 def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int):
     directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     time.sleep(10)
-    print("Press 'Enter' to proceed the training task \n")
+    print("\nPress 'Enter' to proceed the training task")
     while True:
         if keyboard.is_pressed('enter'):
             break
-    print("\nTraining Task will start")
+    print("Training Task will start")
     
     all_set_accuracies = []
     all_block_accuracies = []
@@ -839,7 +843,7 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
     all_set_results = {}
 
     for set_count in range(1, max_sets + 1):
-        print(f"\nStarting Training Set {set_count}")
+        print(f"Starting Training Set {set_count}")
         correct_responses_per_block = []
         blocks = 3
         trials_per_block = 16
@@ -948,6 +952,11 @@ def training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
         else: 
             print(f"Training accuracy below 90% with an accuracy of {set_average_accuracy:.2f}%")
             set_count +=1
+
+        print("\nPress 'Enter' to proceed the next training set")
+        while True:
+            if keyboard.is_pressed('enter'):
+                break            
     
     if set_count == max_sets and all_set_accuracies < 90:
         print("Maximum sets reached, but training accuracy is still below 90%.")
