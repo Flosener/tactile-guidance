@@ -46,7 +46,7 @@ def load_images(path, targets):
     images = []
 
     for target in targets:
-        image = load_and_preprocess_image(path + target + '.jpg')
+        image = load_and_preprocess_image(path + target + '.png')
         images.append(image)
     test_images = np.stack(images)
 
@@ -56,15 +56,15 @@ if __name__ == '__main__':
     # Load EMNIST training dataset
     '''test_images, test_labels = extract_test_samples('letters')'''
 
-    #image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Images/four.jpg' 
-    image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
+    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Images/' 
+    #image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
 
-    targets = ['try', 'g']
+    targets = ['x', 'y', 'f', '0']
     test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
     test_images, test_labels = load_images(image_path, targets), int_labels_to_emnist_format(test_labels)
 
     #test_images = torch.tensor((test_images/255-0.5).reshape(20800, 1, 28, 28))
-    test_images = torch.tensor((test_images/255-0.5).reshape(2, 1, 28, 28))
+    test_images = torch.tensor((test_images/255-0.5).reshape(4, 1, 28, 28))
     test_data = list(zip(test_images.float(), test_labels.astype('int64')))
 
     # Load and test CNN

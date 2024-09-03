@@ -8,6 +8,12 @@ def load_and_preprocess_image(image_path):
 
     # Convert the image to grayscale
     image = image.convert('L')
+    #print(image)
+    #data=np.asarray(image)
+    #print(data)
+    #image.show()
+    image = Image.eval(image, lambda x: 0 if x<255 else 255)
+    #image.show()
     image = Image.eval(image, lambda x: 255 - x)
 
     # Resize the image to 28x28 pixels
