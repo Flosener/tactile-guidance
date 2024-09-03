@@ -206,18 +206,24 @@ def staircase_method(orientation):
     # Calculate the average of the last 4 direction changes
     if len(reversal_points) >= 4:
         threshold = sum(reversal_points[-4:]) / 4
+        # Only plot the last 4 reversal points
+        plot_reversal_points = reversal_points[-4:]
+        plot_reversal_indices = reversal_indices[-4:]
     else:
         threshold = sum(reversal_points) / len(reversal_points)
+        # Plot all the reversal points if there are less than 4
+        plot_reversal_points = reversal_points
+        plot_reversal_indices = reversal_indices
 
     print(f"Estimated Threshold: {threshold:.2f}")
 
     # Plot the entire sequence of values
     plt.figure()
     plt.plot(values, marker='o', linestyle='-', color='b', label='Values')
-    
-    # Highlight the last 4 points (including the last value and 3 last reversal points)
+
+    # Plot only the last 4 reversal points with red circles
     if len(reversal_points) > 0:
-        plt.plot(reversal_indices, reversal_points, marker='o', linestyle='None', color='r', label='Last 4 Reversal Points')
+        plt.plot(plot_reversal_indices, plot_reversal_points, marker='o', linestyle='None', color='r', label='Last 4 Reversal Points')
 
     plt.xlabel('Trials')
     plt.ylabel('Value')
