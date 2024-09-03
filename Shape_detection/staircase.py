@@ -60,11 +60,19 @@ def staircase_method():
             trial_count += 1
 
     # Include the last value and the last 3 reversal points for threshold calculation
-    last_points = reversal_points[-3:] + [values[-1]]
+    '''last_points = reversal_points[-3:] + [values[-1]]
     last_indices = reversal_indices[-3:] + [len(values) - 1]
     
     # Calculate the average of these last 4 points
     threshold = sum(last_points) / 4
+    print(f"Estimated Threshold: {threshold:.2f}")'''
+
+    # Calculate the average of the last 4 direction changes
+    if len(reversal_points) >= 4:
+        threshold = sum(reversal_points[-4:]) / 4
+    else:
+        threshold = sum(reversal_points) / len(reversal_points)
+
     print(f"Estimated Threshold: {threshold:.2f}")
 
     # Plot the entire sequence of values
@@ -72,8 +80,10 @@ def staircase_method():
     plt.plot(values, marker='o', linestyle='-', color='b', label='Values')
     
     # Highlight the last 4 points (including the last value and 3 last reversal points)
-    if len(last_points) > 0:
-        plt.plot(last_indices, last_points, marker='o', linestyle='None', color='r', label='Last 4 Points')
+    '''if len(last_points) > 0:
+        plt.plot(last_indices, last_points, marker='o', linestyle='None', color='r', label='Last 4 Points')'''
+    if len(reversal_points) > 0:
+        plt.plot(reversal_indices, reversal_points, marker='o', linestyle='None', color='r', label='Last 4 Reversal Points')
 
     plt.xlabel('Trials')
     plt.ylabel('Value')
