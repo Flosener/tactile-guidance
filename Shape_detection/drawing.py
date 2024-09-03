@@ -36,7 +36,7 @@ shapes = {
     '7': [(0, 0), (2, 0), (2, -4)],
     '8': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4), (2, -2), (0, -2), (0, 0)],
     '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4)],
-    'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -2.2), (0.2, 2.2)],
+    'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -0.2), (0.2, -0.2)],
     'b': [(0, 0), (2, 0), (2, -2), (0, -2), (0, 2)],
     'c': [(0, 0), (-2, 0), (-2, -2), (0, -2)],
     'd': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 2)],
@@ -45,7 +45,7 @@ shapes = {
     'g': [(0, 0), (-2, 0), (-2, -4), (0, -4), (0, -2), (-1, -2)],
     'h': [(0, 0), (0, -4), (0, -2), (2, -2), (2, -4)],
     'i': [(0, 0), (2, 0), (1, 0), (1, -4), (0, -4), (2, -4)],
-    'j': [(0, 0), (2, 0), (2, -4), (0, -4), (0, -2)],
+    'j': [(0, 0), (2, 0), (2, -4), (0, -4)],
     'k': [(0, 0), (0, -4), (2, -2), (1, -3), (2, -4)],
     'l': [(0, 0), (0, -4), (2, -4)],
     'm': [(0, 0), (0, 4), (2, 2), (4, 4), (4, 0)],
@@ -242,6 +242,7 @@ def alpha():
                     time.sleep(5)  # 5 second pause after each shape
 
                     # 30 seconds pause after every 10 figures                    
+                    total_figures += 1
                     if total_figures % 10 == 0:
                         print("Taking 30 seconds pause")
                         time.sleep(30)
@@ -443,8 +444,7 @@ def beta():
                         pattern_period=500,
                         pattern_start_time=0,
                         exclusive_channel=False,
-                        clear_other_channels=False
-                    )
+                        clear_other_channels=False)
                 return 'right', time_required
             elif dx < 0 and dy == 0:
                 if belt_controller:
@@ -458,8 +458,7 @@ def beta():
                         pattern_period=500,
                         pattern_start_time=0,
                         exclusive_channel=False,
-                        clear_other_channels=False
-                    )
+                        clear_other_channels=False)
                 return 'left', time_required
             elif dy > 0 and dx == 0:
                 if belt_controller:
@@ -473,8 +472,7 @@ def beta():
                         pattern_period=500,
                         pattern_start_time=0,
                         exclusive_channel=False,
-                        clear_other_channels=False
-                    )
+                        clear_other_channels=False)
                 return 'top', time_required
             elif dy < 0 and dx == 0:
                 if belt_controller:
@@ -488,15 +486,12 @@ def beta():
                         pattern_period=500,
                         pattern_start_time=0,
                         exclusive_channel=False,
-                        clear_other_channels=False
-                    )
+                        clear_other_channels=False)
                 return 'down', time_required
             elif dx > 0 and dy > 0:
                 def diagonal_top_right():
                     start_time = time.time()
                     while time.time() - start_time < time_required:
-                        if stop_event.is_set():
-                            break
                         belt_controller.send_vibration_command(
                             channel_index=0,
                             pattern=BeltVibrationPattern.SINGLE_SHORT,
@@ -507,8 +502,7 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -521,8 +515,9 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
+                        if stop_event.is_set():
+                            break
                 # Start diagonal vibration in a separate thread
                 Thread(target=diagonal_top_right).start()
                 return 'diagonal top right', time_required
@@ -531,8 +526,6 @@ def beta():
                 def diagonal_bottom_right():
                     start_time = time.time()
                     while time.time() - start_time < time_required:
-                        if stop_event.is_set():
-                            break
                         belt_controller.send_vibration_command(
                             channel_index=0,
                             pattern=BeltVibrationPattern.SINGLE_SHORT,
@@ -543,8 +536,7 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -557,8 +549,9 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
+                        if stop_event.is_set():
+                            break
                 # Start diagonal vibration in a separate thread
                 Thread(target=diagonal_bottom_right).start()
                 return 'diagonal bottom right', time_required
@@ -567,8 +560,6 @@ def beta():
                 def diagonal_top_left():
                     start_time = time.time()
                     while time.time() - start_time < time_required:
-                        if stop_event.is_set():
-                            break
                         belt_controller.send_vibration_command(
                             channel_index=0,
                             pattern=BeltVibrationPattern.SINGLE_SHORT,
@@ -579,8 +570,7 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -593,8 +583,9 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
+                        if stop_event.is_set():
+                            break                        
                 # Start diagonal vibration in a separate thread
                 Thread(target=diagonal_top_left).start()
                 return 'diagonal top left', time_required
@@ -603,8 +594,6 @@ def beta():
                 def diagonal_bottom_left():
                     start_time = time.time()
                     while time.time() - start_time < time_required:
-                        if stop_event.is_set():
-                            break
                         belt_controller.send_vibration_command(
                             channel_index=0,
                             pattern=BeltVibrationPattern.SINGLE_SHORT,
@@ -615,8 +604,7 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -629,8 +617,9 @@ def beta():
                             pattern_period=500,
                             pattern_start_time=0,
                             exclusive_channel=False,
-                            clear_other_channels=False
-                        )
+                            clear_other_channels=False)
+                        if stop_event.is_set():
+                            break                        
                 # Start diagonal vibration in a separate thread
                 Thread(target=diagonal_bottom_left).start()
                 return 'diagonal bottom left', time_required
@@ -736,6 +725,7 @@ def beta():
                     time.sleep(5)  # 5 second pause after each shape
 
                     # 30 seconds pause after every 10 figures                    
+                    total_figures += 1
                     if total_figures % 10 == 0:
                         print("Taking 30 seconds pause")
                         time.sleep(30)
