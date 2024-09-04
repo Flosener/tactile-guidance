@@ -18,12 +18,6 @@ from pybelt.belt_scanner import BeltScanner
 from openpyxl.workbook import Workbook
 from bracelet import connect_belt
 
-connection_check, belt_controller = connect_belt()
-if connection_check:
-    print('Bracelet connection successful.')
-else:
-    print('Error connecting bracelet. Aborting.')
-    sys.exit()
 
 # Define the event for stopping vibration
 stop_event = threading.Event()
@@ -437,7 +431,6 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
-                        #time.sleep(0.25)  # Delay between vibrations
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -451,7 +444,6 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
-                        #time.sleep(0.25)  # Delay between vibrations
                         if stop_event.is_set():
                             break
                 elif direction == 'top left':
@@ -467,7 +459,6 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -496,7 +487,6 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -525,7 +515,6 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
-                        #time.sleep(0.5)  # Delay between vibrations
                         if stop_event.is_set():
                             break
                         belt_controller.send_vibration_command(
@@ -1037,6 +1026,13 @@ def save_calibration_data(participant_ID, preference, int_top, int_bottom, int_l
     print(f"Calibration data saved to {file_path}")
 
 if __name__ == "__main__":
+    connection_check, belt_controller = connect_belt()
+    if connection_check:
+        print('Bracelet connection successful.')
+    else:
+        print('Error connecting bracelet. Aborting.')
+        sys.exit()
+
     participant_ID = input("Enter Participant ID: ")	
 
     # Calibration 
