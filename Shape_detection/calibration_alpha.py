@@ -42,32 +42,12 @@ def esc_key_listener(stop_event):
 def capture_direction():
     while True:
         if keyboard.is_pressed('up'):
-            time.sleep(0.1)  # Debounce delay
-            if keyboard.is_pressed('right'):
-                return 'top right'
-            elif keyboard.is_pressed('left'):
-                return 'top left'
             return 'top'
         elif keyboard.is_pressed('down'):
-            time.sleep(0.1)  # Debounce delay
-            if keyboard.is_pressed('right'):
-                return 'bottom right'
-            elif keyboard.is_pressed('left'):
-                return 'bottom left'
             return 'down'
         elif keyboard.is_pressed('right'):
-            time.sleep(0.1)  # Debounce delay
-            if keyboard.is_pressed('up'):
-                return 'top right'
-            elif keyboard.is_pressed('down'):
-                return 'bottom right'
             return 'right'
         elif keyboard.is_pressed('left'):
-            time.sleep(0.1)  # Debounce delay
-            if keyboard.is_pressed('up'):
-                return 'top left'
-            elif keyboard.is_pressed('down'):
-                return 'bottom left'
             return 'left'
 
 def start_key_listener(stop_event):
@@ -127,7 +107,7 @@ def staircase_method(orientation):
     Perform the staircase method to determine the threshold intensity for the given orientation.
     """
     initial_value = 100
-    step_sizes = [64, 32, 16, 8, 4, 2, 1]
+    step_sizes = [64, 32, 16, 8, 4, 2, 1, 0]
     step_size_index = 0
     step_size = step_sizes[step_size_index]
     current_value = initial_value
@@ -622,7 +602,7 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
             if keyboard.is_pressed('enter'):
                 break            
     
-    if set_count == max_sets and all_set_accuracies < 90:
+    if set_count == max_sets and all(acc < 90 for acc in all_set_accuracies):
         print("Maximum sets reached, but training accuracy is still below 90%.")
               
     # Save result to .txt file

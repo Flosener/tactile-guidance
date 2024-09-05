@@ -226,7 +226,7 @@ def staircase_method(orientation):
     Perform the staircase method to determine the threshold intensity for the given orientation.
     """
     initial_value = 100
-    step_sizes = [64, 32, 16, 8, 4, 2, 1]
+    step_sizes = [64, 32, 16, 8, 4, 2, 1, 0]
     step_size_index = 0
     step_size = step_sizes[step_size_index]
     current_value = initial_value
