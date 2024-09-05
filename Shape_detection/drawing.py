@@ -548,12 +548,23 @@ def beta():
                             if stop_event.is_set():
                                 break
                         elif direction == 'top right':
-                            belt_controller.send_vibration_command(            
+                            belt_controller.send_vibration_command(
                                 channel_index=0,
                                 pattern=BeltVibrationPattern.CONTINUOUS,
-                                intensity=avg_int,
-                                orientation_type=BeltOrientationType.BINARY_MASK,
-                                orientation=0b110000,
+                                intensity=int_top,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=90,  # Top
+                                pattern_iterations=None,
+                                pattern_period=500,
+                                pattern_start_time=0,
+                                exclusive_channel=False,
+                                clear_other_channels=False)
+                            belt_controller.send_vibration_command(
+                                channel_index=1,
+                                pattern=BeltVibrationPattern.CONTINUOUS,
+                                intensity=int_right,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=120,  # Right
                                 pattern_iterations=None,
                                 pattern_period=500,
                                 pattern_start_time=0,
@@ -565,9 +576,20 @@ def beta():
                             belt_controller.send_vibration_command(
                                 channel_index=0,
                                 pattern=BeltVibrationPattern.CONTINUOUS,
-                                intensity=avg_int,
-                                orientation_type=BeltOrientationType.BINARY_MASK,
-                                orientation=0b101000,
+                                intensity=int_bottom,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=60, 
+                                pattern_iterations=None,
+                                pattern_period=500,
+                                pattern_start_time=0,
+                                exclusive_channel=False,
+                                clear_other_channels=False)
+                            belt_controller.send_vibration_command(
+                                channel_index=1,
+                                pattern=BeltVibrationPattern.CONTINUOUS,
+                                intensity=int_right,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=120,  
                                 pattern_iterations=None,
                                 pattern_period=500,
                                 pattern_start_time=0,
@@ -576,12 +598,23 @@ def beta():
                             if stop_event.is_set():
                                 break
                         elif direction == 'top left':
-                            belt_controller.send_vibration_command(           
+                            belt_controller.send_vibration_command(
                                 channel_index=0,
                                 pattern=BeltVibrationPattern.CONTINUOUS,
-                                intensity=avg_int,
-                                orientation_type=BeltOrientationType.BINARY_MASK,
-                                orientation=0b010100,
+                                intensity=int_top,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=90,  # Top
+                                pattern_iterations=None,
+                                pattern_period=500,
+                                pattern_start_time=0,
+                                exclusive_channel=False,
+                                clear_other_channels=False)
+                            belt_controller.send_vibration_command(
+                                channel_index=1,
+                                pattern=BeltVibrationPattern.CONTINUOUS,
+                                intensity=int_left,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=45,  
                                 pattern_iterations=None,
                                 pattern_period=500,
                                 pattern_start_time=0,
@@ -590,12 +623,23 @@ def beta():
                             if stop_event.is_set():
                                 break
                         elif direction == 'bottom left':
-                            belt_controller.send_vibration_command(            
+                            belt_controller.send_vibration_command(
                                 channel_index=0,
                                 pattern=BeltVibrationPattern.CONTINUOUS,
-                                intensity=avg_int,
-                                orientation_type=BeltOrientationType.BINARY_MASK,
-                                orientation=0b001100,
+                                intensity=int_bottom,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=60, 
+                                pattern_iterations=None,
+                                pattern_period=500,
+                                pattern_start_time=0,
+                                exclusive_channel=False,
+                                clear_other_channels=False)
+                            belt_controller.send_vibration_command(
+                                channel_index=1,
+                                pattern=BeltVibrationPattern.CONTINUOUS,
+                                intensity=int_left,
+                                orientation_type=BeltOrientationType.ANGLE,
+                                orientation=45, 
                                 pattern_iterations=None,
                                 pattern_period=500,
                                 pattern_start_time=0,
