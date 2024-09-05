@@ -13,7 +13,7 @@ shapes = {
     '6': [(0, 0), (0, -4), (2, -4), (2, -2), (0, -2)],
     '7': [(0, 0), (2, 0), (2, -4)],
     '8': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4), (2, -2), (0, -2), (0, 0)],
-    '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4)],
+    '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4), (-2, -4)],
     'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -0.2), (0.2, -0.2)],
     'b': [(0, 0), (2, 0), (2, -2), (0, -2), (0, 2)],
     'c': [(0, 0), (-2, 0), (-2, -2), (0, -2)],
@@ -54,9 +54,9 @@ def visualize_and_save_shapes_with_arrows(shapes, save_path):
             start = vertices[i]
             end = vertices[i + 1]
             plt.plot([start[0], end[0]], [start[1], end[1]], marker='o')
-            # with arrow
-            #plt.arrow(start[0], start[1], end[0] - start[0], end[1] - start[1],
-            #          head_width=0.2, length_includes_head=True, color='blue')
+            #with arrow
+            plt.arrow(start[0], start[1], end[0] - start[0], end[1] - start[1],
+                      head_width=0.2, length_includes_head=True, color='blue')
 
         plt.gca().set_aspect('equal', adjustable='box')
         
