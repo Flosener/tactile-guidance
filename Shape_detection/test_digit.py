@@ -43,7 +43,7 @@ def load_images(path, targets):
     images = []
 
     for target in targets:
-        image = load_and_preprocess_image(path + target + '.png')
+        image = load_and_preprocess_image(path + target + '.jpg')
         images.append(image)
     test_images = np.stack(images)
 
@@ -53,15 +53,15 @@ if __name__ == '__main__':
     # Load EMNIST training dataset
     #test_images, test_labels = extract_test_samples('digits')
 
-    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Images/' 
+    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Pilot Study/' 
     #image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
-    targets = ['2', '6', '7', '8', '0']
+    targets = ['a_0', 'a_1', 'a_2', 'a_3', 'a_4', 'a_5', 'a_6', 'a_7', 'a_8', 'a_9']
     test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     test_images, test_labels = load_images(image_path, targets), int_labels_to_emnist_format(test_labels)
 
     #test_images = torch.tensor((test_images/255-0.5).reshape(40000, 1, 28, 28))
-    test_images = torch.tensor((test_images/255-0.5).reshape(5, 1, 28, 28))
+    test_images = torch.tensor((test_images/255-0.5).reshape(10, 1, 28, 28))
     test_data = list(zip(test_images.float(), test_labels.astype('int64')))
 
     # Load and test CNN
@@ -69,3 +69,18 @@ if __name__ == '__main__':
     cnn = torch.load('torch_emnistcnn_checkpoint.pt', map_location=torch.device("cpu"))
     #cnn.cuda()
     test(cnn)
+
+    targets = ['b_0','b_1', 'b_2', 'b_3', 'b_4', 'b_5', 'b_6', 'b_7', 'b_8', 'b_9']
+    test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    test_images, test_labels = load_images(image_path, targets), int_labels_to_emnist_format(test_labels)
+
+    #test_images = torch.tensor((test_images/255-0.5).reshape(40000, 1, 28, 28))
+    test_images = torch.tensor((test_images/255-0.5).reshape(10, 1, 28, 28))
+    test_data = list(zip(test_images.float(), test_labels.astype('int64')))
+
+    # Load and test CNN
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=min(10000,len(test_labels)), shuffle=False)
+    cnn = torch.load('torch_emnistcnn_checkpoint.pt', map_location=torch.device("cpu"))
+    #cnn.cuda()
+    test(cnn)   

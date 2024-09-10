@@ -31,7 +31,7 @@ shapes = {
     '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4), (-2, -4)],
     'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -0.2), (0.2, -0.2)],
     'b': [(0, 0), (2, 0), (2, -2), (0, -2), (0, 2)],
-    'c': [(0, 0), (-2, 0), (-2, -2), (0, -2)],
+    'c': [(0, 0), (-2, 0), (-2, -4), (0, -4)],
     'd': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 2)],
     'e': [(0, 0), (2, 0), (2, 2), (0, 2), (0, -2), (2, -2)],
     'f': [(0, 0), (-2, 0), (-2, -4), (-2, -2), (0, -2)],
@@ -236,9 +236,9 @@ def alpha():
                             clear_other_channels=False)
                     time.sleep(5)  # 5 second pause after each shape
 
-                    # 30 seconds pause after every 10 figures                    
+                    # 30 seconds pause after every 19 figures                    
                     total_figures += 1
-                    if total_figures % 10 == 0:
+                    if total_figures % 19 == 0:
                         print("Taking 15 seconds pause")
                         time.sleep(15)
 
@@ -770,9 +770,9 @@ def beta():
                             clear_other_channels=False)
                     time.sleep(5)  # 5 second pause after each shape
 
-                    # 30 seconds pause after every 10 figures                    
+                    # 30 seconds pause after every 19 figures                    
                     total_figures += 1
-                    if total_figures % 10 == 0:
+                    if total_figures % 19 == 0:
                         print("Taking 15 seconds pause")
                         time.sleep(15)
 

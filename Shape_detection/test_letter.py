@@ -46,7 +46,7 @@ def load_images(path, targets):
     images = []
 
     for target in targets:
-        image = load_and_preprocess_image(path + target + '.png')
+        image = load_and_preprocess_image(path + target + '.jpg')
         images.append(image)
     test_images = np.stack(images)
 
@@ -56,15 +56,31 @@ if __name__ == '__main__':
     # Load EMNIST training dataset
     '''test_images, test_labels = extract_test_samples('letters')'''
 
-    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Images/' 
+    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Pilot Study/' 
     #image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
 
-    targets = ['x', 'y', 'f', '0']
-    test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    targets = ['a_a', 'a_b', 'a_c', 'a_d', 'a_e', 'a_f', 'a_g', 'a_h', 'a_i', 'a_j', 'a_l', 'a_p', 'a_q', 
+               'a_s', 'a_t', 'a_u']
+    test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 15, 16, 18, 19, 20]
     test_images, test_labels = load_images(image_path, targets), int_labels_to_emnist_format(test_labels)
 
     #test_images = torch.tensor((test_images/255-0.5).reshape(20800, 1, 28, 28))
-    test_images = torch.tensor((test_images/255-0.5).reshape(4, 1, 28, 28))
+    test_images = torch.tensor((test_images/255-0.5).reshape(16, 1, 28, 28))
+    test_data = list(zip(test_images.float(), test_labels.astype('int64')))
+
+    # Load and test CNN
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=min(10000,len(test_labels)), shuffle=False)
+    cnn = torch.load('torch_emnistcnn_letter_v2.pt', map_location=torch.device("cpu"))
+    #cnn.cuda()
+    test(cnn)
+
+    targets = ['b_a', 'b_b', 'b_c', 'b_d', 'b_e', 'b_f', 'b_g', 'b_h', 'b_i', 'b_j', 'b_l', 'b_p', 'b_q', 'b_s', 'b_t', 'b_u', 
+               'b_k', 'b_m', 'b_n', 'b_r', 'b_v', 'b_w', 'b_x', 'b_y', 'b_z'] 
+    test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 15, 16, 18, 19, 20, 10, 12, 13, 17, 21, 22, 23, 24, 25]
+    test_images, test_labels = load_images(image_path, targets), int_labels_to_emnist_format(test_labels)
+
+    #test_images = torch.tensor((test_images/255-0.5).reshape(20800, 1, 28, 28))
+    test_images = torch.tensor((test_images/255-0.5).reshape(25, 1, 28, 28))
     test_data = list(zip(test_images.float(), test_labels.astype('int64')))
 
     # Load and test CNN
