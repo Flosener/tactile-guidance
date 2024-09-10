@@ -1,0 +1,41 @@
+
+Starting category: numbers
+3
+9
+1
+4
+7
+8
+6
+0
+2
+5
+
+Starting category: letters
+p
+b
+c
+q
+e
+t
+f
+l
+g
+s
+h
+j
+d
+u
+i
+a
+
+Starting category: beta
+x
+n
+w
+m
+k
+r
+z
+v
+y

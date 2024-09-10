@@ -1,0 +1,5 @@
+int_top: 47
+int_bottom: 47
+int_left: 47
+int_right: 47
+avg_int: 47

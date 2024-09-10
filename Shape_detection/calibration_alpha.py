@@ -472,7 +472,8 @@ def main_calibration_process():
     return  int_top, int_bottom, int_right, int_left, avg_int 
 
 def training_task(int_top, int_bottom, int_right, int_left, avg_int):
-    directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+    directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection"
+    #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     time.sleep(10)
     print("\nPress 'Enter' to proceed the training task")
     while True:
@@ -621,8 +622,8 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
     print(f'\nResults saved to {file_path}')
 
     # Excel output
-    #with pd.ExcelWriter('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha.xlsx') as writer:
-    with pd.ExcelWriter(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx') as writer:
+    with pd.ExcelWriter('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha_{participant_ID}.xlsx') as writer:
+    #with pd.ExcelWriter(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx') as writer:
         # Write each set's results to its own sheet
         for set_name, results in all_set_results.items():
             df = pd.DataFrame(results)
@@ -658,7 +659,8 @@ def visualize_confusion_matrix(excel_file_path, participant_ID):
             #plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/confusion_matrix_{participant_ID}_{sheet_name}.jpg')
 
 def save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int):
-    directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+    directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection"
+    #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
     file_path = os.path.join(directory, f'intensity alpha_{participant_ID}.txt')
     calibration_data = (
         f"int_top: {int_top}\n"
@@ -682,8 +684,8 @@ if __name__ == "__main__":
     training_task(int_top, int_bottom, int_right, int_left, avg_int)
 
     # Run confusion matrix
-    #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha.xlsx')
-    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx', participant_ID)
+    visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/training_alpha_{participant_ID}.xlsx')
+    #visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/training_alpha_{participant_ID}.xlsx', participant_ID)
     save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int)
 
     belt_controller.disconnect_belt() if belt_controller else None

@@ -15,11 +15,11 @@ import os
 
 # Define shapes with vertices
 shapes = {
-    'cross': [(0, 0), (2, 0), (2, 2), (4, 2), (4, 0), (6, 0), (6, -2), (4, -2), (4, -4), (2, -4), (2, -2), (0, -2)],
-    'square': [(0, 0), (0, 2), (2, 2), (2, 0)],
-    'octagon': [(0, 0), (2, 2), (4, 2), (6, 0), (6, -2), (4, -4), (2, -4), (0, -2)],
-    'star': [(0, 0), (3, 5), (6, 0), (0, 3), (6, 3)],
-    '0': [(0, 0), (2, 0), (2, -4), (0, -4),  (0, 0)],
+    'cross': [(0, 0), (2, 0), (2, 2), (4, 2), (4, 0), (6, 0), (6, -2), (4, -2), (4, -4), (2, -4), (2, -2), (0, -2), (0, 0)],
+    'square': [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)],
+    'octagon': [(0, 0), (2, 2), (4, 2), (6, 0), (6, -2), (4, -4), (2, -4), (0, -2), (0, 0)],
+    'star': [(0, 0), (3, 5), (6, 0), (0, 3), (6, 3), (0, 0)],
+    '0': [(0, 0), (2, 0), (2, -4), (0, -4),  (0, 0), (0, 0)],
     '1': [(0, 0), (0, -2)],
     '2': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4)],
     '3': [(0, 0), (2, 0), (2, -2), (0, -2), (2, -2), (2, -4), (0, -4)],
@@ -59,7 +59,8 @@ shapes = {
 def alpha():
     # Function to load calibration values
     def load_calibration_data(participant_ID):
-        directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
         file_path = os.path.join(directory, f'intensity alpha_{participant_ID}.txt')
         
         calibration_data = {}
@@ -203,7 +204,8 @@ def alpha():
         total_figures = 0
 
         # Open a file to save the drawing order
-        directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
         file_path = f"{directory}drawing order alpha_{participant_ID}.txt"
         with open(file_path, 'w') as file:  
             # Execute drawing tasks for each category sequentially
@@ -237,8 +239,8 @@ def alpha():
                     # 30 seconds pause after every 10 figures                    
                     total_figures += 1
                     if total_figures % 10 == 0:
-                        print("Taking 30 seconds pause")
-                        time.sleep(30)
+                        print("Taking 15 seconds pause")
+                        time.sleep(15)
 
                     # Prompt the user to press 'Enter' to continue
                     print("Press 'Enter' to proceed to the next figure \n")
@@ -280,7 +282,8 @@ def alpha():
 def beta():
     # Function to load calibration values
     def load_calibration_data(participant_ID):
-        directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
         file_path = os.path.join(directory, f'intensity beta_{participant_ID}.txt')
         
         calibration_data = {}
@@ -735,7 +738,8 @@ def beta():
         total_figures = 0
 
         # Open a file to save the drawing order
-        directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
+        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
         file_path = f"{directory}drawing order beta_{participant_ID}.txt"
         with open(file_path, 'w') as file:  
             # Execute drawing tasks for each category sequentially
@@ -769,8 +773,8 @@ def beta():
                     # 30 seconds pause after every 10 figures                    
                     total_figures += 1
                     if total_figures % 10 == 0:
-                        print("Taking 30 seconds pause")
-                        time.sleep(30)
+                        print("Taking 15 seconds pause")
+                        time.sleep(15)
 
                     # Prompt the user to press 'Enter' to continue
                     print("Press 'Enter' to proceed to the next figure \n")
