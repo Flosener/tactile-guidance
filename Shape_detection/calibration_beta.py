@@ -326,7 +326,7 @@ def staircase_method(orientation):
 
     plt.xlabel('Trials')
     plt.ylabel('Value')
-    plt.title(f'Staircase Method_{orientation}')
+    plt.title(f'Staircase Method_{orientation}_beta')
     plt.legend()
     plt.grid(True)
     plt.savefig(f'{participant_ID}_{orientation}_beta')
