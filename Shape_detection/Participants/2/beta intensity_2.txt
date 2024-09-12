@@ -1,0 +1,6 @@
+preference: Interval
+int_top: 3
+int_bottom: 3
+int_left: 3
+int_right: 3
+avg_int: 3

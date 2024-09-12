@@ -1,0 +1,16 @@
+Participant ID: 2
+Intensity for top and bottom: 10
+Intensity for right and left: 10
+Average intensity: 10
+Training task: 4 set/sets
+
+Set 1 block accuracies: [25.0, 25.0, 31.25]
+Set 1 average accuracy: 27.08%
+
+Set 2 block accuracies: [25.0, 25.0, 25.0]
+Set 2 average accuracy: 25.00%
+
+Set 3 block accuracies: [25.0, 31.25, 25.0]
+Set 3 average accuracy: 27.08%
+
+Overall training completed with an average accuracy of 26.39%

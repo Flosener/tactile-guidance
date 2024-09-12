@@ -59,9 +59,9 @@ shapes = {
 def alpha():
     # Function to load calibration values
     def load_calibration_data(participant_ID):
-        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-        file_path = os.path.join(directory, f'intensity alpha_{participant_ID}.txt')
+        directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}"
+        #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        file_path = os.path.join(directory, f'alpha intensity_{participant_ID}.txt')
         
         calibration_data = {}
         
@@ -204,9 +204,9 @@ def alpha():
         total_figures = 0
 
         # Open a file to save the drawing order
-        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-        file_path = f"{directory}drawing order alpha_{participant_ID}.txt"
+        #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}"
+        file_path = f"alpha order_{participant_ID}.txt"
         with open(file_path, 'w') as file:  
             # Execute drawing tasks for each category sequentially
             for category, items in categories.items():
@@ -282,9 +282,9 @@ def alpha():
 def beta():
     # Function to load calibration values
     def load_calibration_data(participant_ID):
-        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-        file_path = os.path.join(directory, f'intensity beta_{participant_ID}.txt')
+        #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}"
+        file_path = os.path.join(directory, f'beta intensity_{participant_ID}.txt')
         
         calibration_data = {}
         
@@ -738,9 +738,9 @@ def beta():
         total_figures = 0
 
         # Open a file to save the drawing order
-        directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
-        #directory = r"D:/WWU/M8 - Master Thesis/Project/Code/"
-        file_path = f"{directory}drawing order beta_{participant_ID}.txt"
+        #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/"
+        directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}"
+        file_path = f"beta order_{participant_ID}.txt"
         with open(file_path, 'w') as file:  
             # Execute drawing tasks for each category sequentially
             for category, items in categories.items():
