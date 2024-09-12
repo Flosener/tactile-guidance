@@ -1,5 +1,0 @@
-int_top: 2
-int_bottom: 2
-int_left: 2
-int_right: 2
-avg_int: 2
