@@ -618,6 +618,7 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
+                        time.sleep(0.2)
                         belt_controller.send_vibration_command(
                             channel_index=1,
                             pattern=BeltVibrationPattern.CONTINUOUS,
@@ -629,6 +630,7 @@ def vibrate_direction(direction, stop_event, preference, int_top, int_bottom, in
                             pattern_start_time=0,
                             exclusive_channel=False,
                             clear_other_channels=False)
+                        time.sleep(0.2)
                         if stop_event.is_set():
                             break
                     elif direction == 'bottom right':
