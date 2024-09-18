@@ -477,7 +477,23 @@ def main_calibration_process():
             continue
 
     return  int_top, int_bottom, int_right, int_left, avg_int 
-
+    
+def load_calibration_data(participant_ID):
+    directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}/"
+    #directory = f"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Participants/{participant_ID}/"
+    file_path = os.path.join(directory, f'alpha intensity_{participant_ID}.txt')
+        
+    calibration_data = {}
+        
+        # Read values from the text file
+    with open(file_path, 'r') as file:
+        for line in file:
+            key, value = line.strip().split(": ")
+            # Convert value to integer if it's a number
+            calibration_data[key] = int(value) if value.isdigit() else value
+        
+    return calibration_data
+    
 def training_task(int_top, int_bottom, int_right, int_left, avg_int):
     #directory = r"C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection"
     directory = f"D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}"
@@ -692,7 +708,16 @@ if __name__ == "__main__":
     participant_ID = input("Enter Participant ID: ")	
 
     # Calibration 
+    
     int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
+    '''calibration_data = load_calibration_data(participant_ID)
+            
+    # Access the values
+    int_top = calibration_data['int_top']
+    int_bottom = calibration_data['int_bottom']  
+    int_left = calibration_data['int_left']
+    int_right = calibration_data['int_right']
+    avg_int = calibration_data['avg_int']'''
 
     # Training task
     training_task(int_top, int_bottom, int_right, int_left, avg_int)
