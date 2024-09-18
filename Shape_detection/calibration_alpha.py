@@ -354,7 +354,7 @@ def familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int):
         belt_controller.send_pulse_command(
             channel_index=0,
             orientation_type=BeltOrientationType.BINARY_MASK,
-            orientation=0b1111,
+            orientation=90,
             intensity=avg_int,
             on_duration_ms=150,
             pulse_period=500,
@@ -587,7 +587,7 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
                 belt_controller.send_pulse_command(
                     channel_index=0,
                     orientation_type=BeltOrientationType.BINARY_MASK,
-                    orientation=0b111100,
+                    orientation=90,
                     intensity=avg_int,
                     on_duration_ms=150,
                     pulse_period=500,

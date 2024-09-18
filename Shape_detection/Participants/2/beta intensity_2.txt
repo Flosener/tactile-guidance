@@ -1,0 +1,6 @@
+preference: Interval
+int_top: 94
+int_bottom: 94
+int_left: 94
+int_right: 94
+avg_int: 94
