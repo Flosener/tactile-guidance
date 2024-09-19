@@ -1,0 +1,11 @@
+Participant ID: 4
+Diagonal pattern: Interval
+Intensity for top and bottom: 97
+Intensity for right and left: 97
+Average intensity: 97
+Training task: 1 set/sets
+
+Set 1 block accuracies: [100.0, 93.75, 87.5]
+Set 1 average accuracy: 93.75%
+
+Overall training completed with an average accuracy of 93.75%
