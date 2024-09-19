@@ -5,7 +5,7 @@ Intensity for right and left: 91
 Average intensity: 90
 Training task: 1 set/sets
 
-Set 1 block accuracies: [93.75, 100.0, 100.0]
-Set 1 average accuracy: 97.92%
+Set 1 block accuracies: [100.0, 100.0, 100.0]
+Set 1 average accuracy: 100.0%
 
 Overall training completed with an average accuracy of 97.92%
