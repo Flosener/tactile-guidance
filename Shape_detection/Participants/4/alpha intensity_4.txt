@@ -1,0 +1,5 @@
+int_top: 90
+int_bottom: 90
+int_left: 90
+int_right: 90
+avg_int: 90
