@@ -1,0 +1,30 @@
+
+Starting category: numbers
+2
+1
+0
+5
+7
+3
+8
+6
+9
+4
+
+Starting category: letters
+q
+g
+a
+t
+u
+e
+d
+s
+i
+b
+j
+h
+c
+l
+p
+f
