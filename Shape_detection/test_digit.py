@@ -53,7 +53,9 @@ if __name__ == '__main__':
     # Load EMNIST training dataset
     #test_images, test_labels = extract_test_samples('digits')
 
-    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Pilot Study/' 
+    participant_ID = input("Enter Participant ID: ")
+
+    image_path = (f'D:/WWU/M8 - Master Thesis/Project/Code/Result/{participant_ID}/')
     #image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
     targets = ['a_0', 'a_1', 'a_2', 'a_3', 'a_4', 'a_5', 'a_6', 'a_7', 'a_8', 'a_9']
     test_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

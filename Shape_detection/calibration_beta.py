@@ -1085,6 +1085,23 @@ def save_calibration_data(participant_ID, preference, int_top, int_bottom, int_l
         file.write(calibration_data)
     print(f"Calibration data saved to {file_path}")
 
+def end_signal(avg_int):
+    if belt_controller:
+        belt_controller.stop_vibration()
+        belt_controller.send_pulse_command(
+        channel_index=0,
+        orientation_type=BeltOrientationType.BINARY_MASK,
+        orientation=0b111100,
+        intensity=avg_int,
+        on_duration_ms=150,
+        pulse_period=500,
+        pulse_iterations=5, 
+        series_period=5000,
+        series_iterations=1,
+        timer_option=BeltVibrationTimerOption.RESET_TIMER,
+        exclusive_channel=False,
+        clear_other_channels=False)
+
 if __name__ == "__main__":
     connection_check, belt_controller = connect_belt()
     if connection_check:
@@ -1095,7 +1112,33 @@ if __name__ == "__main__":
 
     participant_ID = input("Enter Participant ID: ")	
 
-    # Calibration 
+    while True:
+        # Display menu options
+        print("\nChoose an option:")
+        print("0: Finish")
+        print("1: Calibration")
+        print("2: Familiarization phase")
+        print("3: Training task")        
+        print("4: End Signal")      
+
+        choice = input("\nEnter 0, 1, or 2: ")
+        if choice == '0':
+            print("Exiting")
+            break
+        elif choice == '1':
+            preference, int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
+        elif choice == '2':                
+            familiarization_phase(preference, int_top, int_bottom, int_right, int_left, avg_int)
+        elif choice == '3':                
+            training_task(preference, int_top, int_bottom, int_right, int_left, avg_int)
+            visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}/beta training_{participant_ID}.xlsx')
+            save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int)
+        elif choice == '4':
+            end_signal(avg_int)
+        else:
+            print("Invalid choice. Please enter 0, 1, or 2.")
+
+    '''# Calibration 
     preference, int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
 
     # Training task
@@ -1104,7 +1147,7 @@ if __name__ == "__main__":
     # Run confusion matrix
     #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/beta training.xlsx')
     visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}/beta training_{participant_ID}.xlsx')
-    save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int)
+    save_calibration_data(participant_ID, preference, int_top, int_bottom, int_left, int_right, avg_int)'''
 
     belt_controller.disconnect_belt() if belt_controller else None
     sys.exit()

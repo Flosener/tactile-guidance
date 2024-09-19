@@ -100,20 +100,6 @@ def staircase_method(orientation):
     Perform the staircase method to determine the threshold intensity for the given orientation.
     """
     initial_value = 100
-    belt_controller.send_vibration_command(
-    channel_index=0,
-    pattern=BeltVibrationPattern.CONTINUOUS,
-    intensity=100,
-    orientation_type=BeltOrientationType.ANGLE,
-    orientation=orientation, 
-    pattern_iterations=None,
-    pattern_period=500,
-    pattern_start_time=0,
-    exclusive_channel=False,
-    clear_other_channels=False)
-    time.sleep(1)
-    belt_controller.stop_vibration()
-
     step_sizes = [64, 32, 16, 8, 4, 2, 1, 0]
     step_size_index = 0
     step_size = step_sizes[step_size_index]
@@ -128,7 +114,20 @@ def staircase_method(orientation):
     trial_count = 0
 
     print("Press 'up' to increase, 'down' to decrease, 'right' to repeat, and 'esc' to exit.")
-    
+    belt_controller.send_vibration_command(
+    channel_index=0,
+    pattern=BeltVibrationPattern.CONTINUOUS,
+    intensity=100,
+    orientation_type=BeltOrientationType.ANGLE,
+    orientation=orientation, 
+    pattern_iterations=None,
+    pattern_period=500,
+    pattern_start_time=0,
+    exclusive_channel=False,
+    clear_other_channels=False)
+    time.sleep(1)
+    belt_controller.stop_vibration()
+
     while direction_changes < max_reversals and trial_count < max_trials:
         key = keyboard.read_event()
 
@@ -355,7 +354,7 @@ def familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int):
             channel_index=0,
             orientation_type=BeltOrientationType.BINARY_MASK,
             orientation=90,
-            intensity=avg_int,
+            intensity=int_top,
             on_duration_ms=150,
             pulse_period=500,
             pulse_iterations=5, 
@@ -588,7 +587,7 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
                     channel_index=0,
                     orientation_type=BeltOrientationType.BINARY_MASK,
                     orientation=90,
-                    intensity=avg_int,
+                    intensity=int_top,
                     on_duration_ms=150,
                     pulse_period=500,
                     pulse_iterations=5, 
@@ -697,6 +696,23 @@ def save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_rig
         file.write(calibration_data)
     print(f"Calibration data saved to {file_path}")
 
+def end_signal(int_top):
+    if belt_controller:
+        belt_controller.stop_vibration()
+        belt_controller.send_pulse_command(
+        channel_index=0,
+        orientation_type=BeltOrientationType.BINARY_MASK,
+        orientation=90,
+        intensity=int_top,
+        on_duration_ms=150,
+        pulse_period=500,
+        pulse_iterations=5, 
+        series_period=5000,
+        series_iterations=1,
+        timer_option=BeltVibrationTimerOption.RESET_TIMER,
+        exclusive_channel=False,
+        clear_other_channels=False)
+
 if __name__ == "__main__":
     connection_check, belt_controller = connect_belt()
     if connection_check:
@@ -706,18 +722,43 @@ if __name__ == "__main__":
         sys.exit()
     
     participant_ID = input("Enter Participant ID: ")	
+        
+    while True:
+        # Display menu options
+        print("\nChoose an option:")
+        print("0: Finish")
+        print("1: Calibration")
+        print("2: Familiarization phase")
+        print("3: Training task")  
+        print("4: End Signal")      
 
-    # Calibration 
+        choice = input("\nEnter 0, 1, or 2: ")
+        if choice == '0':
+            print("Exiting")
+            break
+        elif choice == '1':
+            int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
+        elif choice == '2':                
+            familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int)
+        elif choice == '3':                
+            training_task(int_top, int_bottom, int_right, int_left, avg_int)
+            visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}/alpha training_{participant_ID}.xlsx')
+            save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int)
+        elif choice == '4':
+            end_signal(int_top)
+        else:
+            print("Invalid choice. Please enter 0, 1, or 2.")
     
-    int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
-    '''calibration_data = load_calibration_data(participant_ID)
+    # Calibration 
+    '''int_top, int_bottom, int_right, int_left, avg_int = main_calibration_process()
+    calibration_data = load_calibration_data(participant_ID)
             
     # Access the values
     int_top = calibration_data['int_top']
     int_bottom = calibration_data['int_bottom']  
     int_left = calibration_data['int_left']
     int_right = calibration_data['int_right']
-    avg_int = calibration_data['avg_int']'''
+    avg_int = calibration_data['avg_int']
 
     # Training task
     training_task(int_top, int_bottom, int_right, int_left, avg_int)
@@ -725,7 +766,7 @@ if __name__ == "__main__":
     # Run confusion matrix
     #visualize_confusion_matrix('C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/alpha training_{participant_ID}.xlsx')
     visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Bracelet/Shape_detection/Participants/{participant_ID}/alpha training_{participant_ID}.xlsx')
-    save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int)
+    save_calibration_data(participant_ID, int_top, int_bottom, int_left, int_right, avg_int)'''
 
     belt_controller.disconnect_belt() if belt_controller else None
     sys.exit()

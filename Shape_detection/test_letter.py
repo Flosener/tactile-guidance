@@ -55,8 +55,10 @@ def load_images(path, targets):
 if __name__ == '__main__':
     # Load EMNIST training dataset
     '''test_images, test_labels = extract_test_samples('letters')'''
+    
+    participant_ID = input("Enter Participant ID: ")
 
-    image_path = 'D:/WWU/M8 - Master Thesis/Project/Code/Pilot Study/' 
+    image_path = (f'D:/WWU/M8 - Master Thesis/Project/Code/Result/{participant_ID}/')
     #image_path = 'C:/Users/feelspace/OptiVisT/tactile-guidance/Shape_detection/Images/'
 
     targets = ['a_a', 'a_b', 'a_c', 'a_d', 'a_e', 'a_f', 'a_g', 'a_h', 'a_i', 'a_j', 'a_l', 'a_p', 'a_q', 
