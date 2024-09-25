@@ -1,0 +1,6 @@
+preference: Interval
+int_top: 53
+int_bottom: 53
+int_left: 53
+int_right: 53
+avg_int: 53

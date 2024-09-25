@@ -654,7 +654,7 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
     return
     #return average_accuracy, block_accuracies, actual_directions, predicted_directions
 
-def visualize_confusion_matrix(excel_file_path):
+def visualize_confusion_matrix(excel_file_path, sheet_name):
     # Load the Excel file
     with pd.ExcelFile(excel_file_path) as xls:
         # Iterate over each sheet in the Excel file

@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
 # Define shapes with vertices
 shapes = {
@@ -65,7 +68,37 @@ def visualize_and_save_shapes_with_arrows(shapes, save_path):
         plt.close()
 
 # Path to save the figures
-save_path = r"D:\WWU\M8 - Master Thesis\Project\Code\Images"
+#save_path = r"D:\WWU\M8 - Master Thesis\Project\Code\Images"
 
 # Visualize and save all shapes with arrows
-visualize_and_save_shapes_with_arrows(shapes, save_path)
+#visualize_and_save_shapes_with_arrows(shapes, save_path)
+
+def visualize_confusion_matrix(excel_file_path):
+    # Load the Excel file
+    with pd.ExcelFile(excel_file_path) as xls:
+        # Iterate over each sheet in the Excel file
+        for sheet_name in xls.sheet_names:
+            # Load the data from the current sheet
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+
+            # Extract the actual and predicted directions
+            actual_directions = df['Actual Direction']
+            predicted_directions = df['Predicted Direction']
+
+            # Compute the confusion matrix
+            cm = confusion_matrix(actual_directions, predicted_directions)
+
+            # Plot the confusion matrix using Seaborn
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                        xticklabels=df['Actual Direction'].unique(),
+                        yticklabels=df['Actual Direction'].unique())
+            plt.xlabel('Predicted Direction')
+            plt.ylabel('Actual Direction')
+            plt.title(f'Confusion Matrix of Actual vs. Predicted Directions_{sheet_name}')
+            plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/cm_{sheet_name}')
+            plt.show()
+
+
+if __name__ == "__main__":
+    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/Training task.xlsx')
