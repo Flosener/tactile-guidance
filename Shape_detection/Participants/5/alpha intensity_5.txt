@@ -1,0 +1,5 @@
+int_top: 45
+int_bottom: 45
+int_left: 45
+int_right: 45
+avg_int: 45
