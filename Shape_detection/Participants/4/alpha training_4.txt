@@ -7,4 +7,4 @@ Training task: 1 set/sets
 Set 1 block accuracies: [81.25, 100.0, 100.0]
 Set 1 average accuracy: 93.75%
 
-Overall training completed with an average accuracy of 91.67%
+Overall training completed with an average accuracy of 93.75%
