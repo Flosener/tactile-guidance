@@ -7,8 +7,8 @@ import seaborn as sns
 
 # Define shapes with vertices
 shapes = {
-    '0': [(0, 0), (2, 0), (2, -4), (0, -4),  (0, 0)],
-    '1': [(0, 0), (0, -2)],
+    '0': [(0, 0), (2, 0), (2, -4), (0, -4),  (0, 0), (0, 0)],
+    '1': [(0, 0), (0, -4)],
     '2': [(0, 0), (2, 0), (2, -2), (0, -2), (0, -4), (2, -4)],
     '3': [(0, 0), (2, 0), (2, -2), (0, -2), (2, -2), (2, -4), (0, -4)],
     '4': [(0, 0), (0, -2), (2, -2), (2, 0), (2, -4)],
@@ -19,7 +19,7 @@ shapes = {
     '9': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 0), (0, -4), (-2, -4)],
     'a': [(0, 0), (-2, 0), (-2, 2), (0, 2), (0, -0.2), (0.2, -0.2)],
     'b': [(0, 0), (2, 0), (2, -2), (0, -2), (0, 2)],
-    'c': [(0, 0), (-2, 0), (-2, -2), (0, -2)],
+    'c': [(0, 0), (-2, 0), (-2, -4), (0, -4)],
     'd': [(0, 0), (-2, 0), (-2, -2), (0, -2), (0, 2)],
     'e': [(0, 0), (2, 0), (2, 2), (0, 2), (0, -2), (2, -2)],
     'f': [(0, 0), (-2, 0), (-2, -4), (-2, -2), (0, -2)],
@@ -67,38 +67,49 @@ def visualize_and_save_shapes_with_arrows(shapes, save_path):
         plt.savefig(os.path.join(save_path, f"{shape_name}.jpg"), bbox_inches='tight', pad_inches=0, format='jpg')
         plt.close()
 
-# Path to save the figures
-#save_path = r"D:\WWU\M8 - Master Thesis\Project\Code\Images"
+'''# Path to save the figures
+save_path = r"D:\WWU\M8 - Master Thesis\Project\Code\Images"
 
 # Visualize and save all shapes with arrows
-#visualize_and_save_shapes_with_arrows(shapes, save_path)
+visualize_and_save_shapes_with_arrows(shapes, save_path)'''
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 def visualize_confusion_matrix(excel_file_path):
     # Load the Excel file
     with pd.ExcelFile(excel_file_path) as xls:
+        # Define the order of labels
+        labels = ['down', 'left', 'right', 'top']
+        
         # Iterate over each sheet in the Excel file
         for sheet_name in xls.sheet_names:
             # Load the data from the current sheet
             df = pd.read_excel(xls, sheet_name=sheet_name)
-
+            
+            # Filter to only include rows with ID 3, 4, or 5
+            df = df[df['ID'].isin([3, 4, 5])]
+            df = df[df['Actual Direction'].isin(labels)]  # Use predefined labels for filtering
+            
             # Extract the actual and predicted directions
             actual_directions = df['Actual Direction']
             predicted_directions = df['Predicted Direction']
 
-            # Compute the confusion matrix
-            cm = confusion_matrix(actual_directions, predicted_directions)
+            # Compute the confusion matrix with specified labels
+            cm = confusion_matrix(actual_directions, predicted_directions, labels=labels)
 
             # Plot the confusion matrix using Seaborn
             plt.figure(figsize=(8, 6))
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
-                        xticklabels=df['Actual Direction'].unique(),
-                        yticklabels=df['Actual Direction'].unique())
+                        xticklabels=labels,
+                        yticklabels=labels)
             plt.xlabel('Predicted Direction')
             plt.ylabel('Actual Direction')
-            plt.title(f'Confusion Matrix of Actual vs. Predicted Directions_{sheet_name}')
-            plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/cm_{sheet_name}')
+            plt.title(f'Confusion Matrix of Actual vs. Predicted Directions - {sheet_name}')
+            plt.savefig(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/cm_{sheet_name}.png')  # Ensure .png extension
             plt.show()
 
-
 if __name__ == "__main__":
-    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/Training task.xlsx')
+    visualize_confusion_matrix(f'D:/WWU/M8 - Master Thesis/Project/Code/Result/training.xlsx')
