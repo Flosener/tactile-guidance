@@ -1,0 +1,6 @@
+preference: Interval
+int_top: 15
+int_bottom: 15
+int_left: 15
+int_right: 15
+avg_int: 15
