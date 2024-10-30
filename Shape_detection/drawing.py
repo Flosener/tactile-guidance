@@ -178,7 +178,7 @@ def alpha():
                     belt_controller.stop_vibration()
                     belt_controller.send_pulse_command(
                         channel_index=0,
-                        orientation_type=BeltOrientationType.BINARY_MASK,
+                        orientation_type=BeltOrientationType.ANGLE,
                         orientation=90,
                         intensity=avg_int,
                         on_duration_ms=150,
@@ -223,7 +223,7 @@ def alpha():
                         belt_controller.stop_vibration()
                         belt_controller.send_pulse_command(
                             channel_index=0,
-                            orientation_type=BeltOrientationType.BINARY_MASK,
+                            orientation_type=BeltOrientationType.ANGLE,
                             orientation=90,
                             intensity=avg_int,
                             on_duration_ms=150,

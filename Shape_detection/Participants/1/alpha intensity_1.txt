@@ -1,0 +1,5 @@
+int_top: 10
+int_bottom: 10
+int_left: 10
+int_right: 10
+avg_int: 10

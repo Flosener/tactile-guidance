@@ -352,7 +352,7 @@ def familiarization_phase(int_top, int_bottom, int_right, int_left, avg_int):
         belt_controller.stop_vibration()
         belt_controller.send_pulse_command(
             channel_index=0,
-            orientation_type=BeltOrientationType.BINARY_MASK,
+            orientation_type=BeltOrientationType.ANGLE,
             orientation=90,
             intensity=int_top,
             on_duration_ms=150,
@@ -585,7 +585,7 @@ def training_task(int_top, int_bottom, int_right, int_left, avg_int):
                 belt_controller.stop_vibration()
                 belt_controller.send_pulse_command(
                     channel_index=0,
-                    orientation_type=BeltOrientationType.BINARY_MASK,
+                    orientation_type=BeltOrientationType.ANGLE,
                     orientation=90,
                     intensity=int_top,
                     on_duration_ms=150,
@@ -701,7 +701,7 @@ def end_signal(int_top):
         belt_controller.stop_vibration()
         belt_controller.send_pulse_command(
         channel_index=0,
-        orientation_type=BeltOrientationType.BINARY_MASK,
+        orientation_type=BeltOrientationType.ANGLE,
         orientation=90,
         intensity=int_top,
         on_duration_ms=150,
