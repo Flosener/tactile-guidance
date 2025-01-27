@@ -151,4 +151,5 @@ aibox/resources/
 aibox/midas/weights/
 aibox/example_gpu.sh
 aibox/UOS_HPC_Guide.md
+aibox/experiment/forms
 

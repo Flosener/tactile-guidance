@@ -1,0 +1,257 @@
+---
+title: "OptiVisT AIBox Grasping Task Analysis"
+author: "Florian Pätzold"
+date: "12/09/2024"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# 1. Setup
+
+Set up the document.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+#knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = TRUE) # for debugging
+```
+
+Import all necessary packages.
+
+```{r, echo=FALSE}
+library(tidyverse) # ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
+library(scales) # ggplot default color palette
+library(e1071) # skewness and kurtosis
+```
+
+Load all the grasping data.
+
+```{r}
+# Set working directory to the folder containing the CSV files
+base_dir <- getwd()
+data_dir <- paste0(base_dir, "/../data/")
+
+# Get list of all CSV files for the grasping task in the folder
+files <- list.files(data_dir, pattern = "*grasping_task*")
+
+data_raw <- data.frame()
+for (file in files) {
+  csv_data <- read_csv(paste0(data_dir,file))
+  participant_id = str_sub(file, start = -5, end = -5)
+  csv_data <- csv_data %>% mutate(participant_id = as.numeric(participant_id))
+  data_raw <- rbind(data_raw, csv_data)
+}
+
+# View sample of the combined data
+data_raw %>% sample_n(10)
+
+# Save the combined data frame as a CSV file
+write.csv(data_raw, paste0(data_dir,"combined_grasping.csv"), row.names = FALSE)
+```
+
+# 2. Data Preprocessing
+
+## 2.1 Data Engineering
+
+Rename the columns and set data type.
+
+```{r}
+coco_labels <- c(
+  "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+  "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
+  "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", 
+  "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", 
+  "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", 
+  "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", 
+  "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", 
+  "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", 
+  "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", 
+  "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+)
+names(coco_labels) <- as.character(0:79)
+
+data_engineered <- data_raw %>% 
+  mutate(trial = as.numeric(...1),
+         object = coco_labels[as.character(`0`)],
+         duration = as.numeric(`1`),
+         success = as.numeric(ifelse(`2` == "y",1,0))
+         ) %>% 
+  select(participant_id, trial, object, duration, success)
+
+# View sample of the engineered data
+data_engineered %>% sample_n(10)
+```
+
+## 2.2 Data Cleaning
+
+We will detect and treat missing values as well as technical false measurements.
+
+```{r}
+n_uncleaned <- nrow(data_engineered)
+
+# Detect missing values and outliers
+outliers <- rbind(
+  data_engineered %>% filter(!complete.cases(.)), 
+  data_engineered %>% filter_all(all_vars(is.infinite(.))),
+  data_engineered %>% filter(participant_id < 0), # No negative participant IDs
+  data_engineered %>% filter(trial < 0), # No negative trial numbers
+  data_engineered %>% filter(trial > 25), # Grasping task has exactly 25 trials
+  data_engineered %>% filter(duration < 0), # Negative trial durations are measuring error
+  data_engineered %>% filter(success != 0 & success != 1)
+  )
+outliers
+
+# Treatment
+data <- data_engineered %>% anti_join(outliers, by = colnames(data_engineered))
+
+n_cleaned <- nrow(data)
+cat('Rows removed: ', n_uncleaned - n_cleaned)
+```
+
+Outlier detection and potential treatment. Here, only the duration is of relevance.
+
+```{r}
+# Visualize duration distribution
+data %>% 
+  ggplot(aes(x = duration, fill = participant_id)) +
+  geom_density(alpha=0.4) +
+  labs(title = "Duration distribution by Participant\n",
+       x = "\nDuration",
+       y = NULL) +
+  theme_minimal()
+
+# Visualize normality using QQ-plot
+data %>% 
+  ggplot(aes(sample = duration)) +
+  geom_qq() +
+  geom_qq_line(color = 'firebrick') +
+  labs(title = "Q-Q Plots of Duration by Participant\n",
+       x = "\nTheoretical Quantiles",
+       y = "Sample Quantiles\n") +
+  theme_minimal() +
+  facet_wrap(~ participant_id)
+
+# Summary statistics for duration
+data %>% 
+  group_by(participant_id) %>% 
+  summarise(
+    min = min(duration), 
+    median = median(duration), 
+    mean = mean(duration), 
+    max = max(duration), 
+    skew = skewness(duration)
+    )
+
+# Optional: Shapiro-Wilk Test (Wilhelm, Jochen. (2020). Re: Use T test, transform data or use non parametric tests?. Retrieved from: https://www.researchgate.net/post/Use_T_test_transform_data_or_use_non_parametric_tests/5efd860f4397bc39891a1b98/citation/download. )
+
+# Treatment: natural slight right-skewness [0,Inf] --> no treatment
+```
+
+The data is slightly right-skewed, but neither strongly nor extremely, so this is acceptable.
+
+# 3. Analysis
+
+## 3.1 Exploration
+
+### Visualizations
+
+We will explore the data using visualizations and summary statistics.
+
+Pre-load color palette.
+
+```{r}
+hex <- hue_pal()(8)
+hex
+show_col(hex)
+
+# red: #F8766D
+# orange: #C49A00
+# olive: #93AA00
+# green: #00BE67
+# cyan: #00BFC4
+# lightblue: #00B9E3
+# darkblue: #619CFF
+```
+
+Performance over time (fatigue effects)
+
+```{r}
+# Trial durations over time (speed fatigue)
+data %>% group_by(trial) %>% summarise(mean_duration = mean(duration)) %>% 
+  ggplot(aes(x = trial, y = mean_duration)) +
+  geom_point(color = '#F8766D') +
+  geom_line(color = '#F8766D') +
+  labs(title = "Mean Duration per Trial\n",
+       x = "\nTrial",
+       y = "Duration\n") +
+  theme_minimal()
+
+# Success rates over time (accuracy fatigue)
+success_freq <- data %>% group_by(trial) %>% summarise(success_count = sum(success == 1))
+n_participants <- max(data$participant_id)
+success_freq %>% 
+  ggplot(aes(x = trial, y = (success_count/n_participants)*100)) +
+  geom_col(fill = '#00BFC4') +
+  labs(title = "Success Percentage per Trial\n",
+       x = "\nTrial",
+       y = "Success Percentage\n") +
+  scale_y_continuous(
+    breaks = c(seq(from = 0, to = 100, by = 20)),
+    limits = c(0, 100)
+    ) +
+  theme_minimal()
+```
+
+Inidividual performance differences.
+
+```{r}
+# Differences between participants in trial duration
+data %>% 
+  ggplot(aes(x = participant_id, y = duration)) +
+  geom_boxplot(fill = '#619CFF') +
+  labs(title = "Title\n",
+       x = "\nParticipant",
+       y = "Duration\n") +
+  theme_minimal()
+
+# Differences between participants in success rates
+n_trials <- max(data$trial)
+data %>%
+  group_by(participant_id) %>%
+  summarize(success_count = sum(success == 1)) %>%
+  ggplot(aes(x = as.factor(participant_id), y = (success_count/n_trials)*100)) +
+  geom_col(color = 'black', fill = '#C49A00') +
+  geom_text(aes(label = round((success_count/n_trials)*100, 2), vjust = 2)) +
+  labs(title = "Success Rate per Participant\n",
+       x = "\nParticipant",
+       y = "Success Percentage\n") +
+  scale_y_continuous(
+    breaks = c(seq(from = 0, to = 100, by = 20)),
+    limits = c(0, 100)
+    ) +
+  theme_minimal()
+```
+
+### Correlation
+
+We will now investigate potential correlations between variables.
+
+```{r}
+
+```
+
+
+## 3.2 Confirmation
+
+After EDA, we will formulate and test relevant hypotheses.
+
+```{r}
+
+```
+
+
+# 4. Modeling
+
+Not required.
+
+
