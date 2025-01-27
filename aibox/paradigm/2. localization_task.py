@@ -166,7 +166,7 @@ def draw_shapes_bracelet(belt_controller, bracelet, shapes, randomize_order=Fals
 
 
 if __name__ == '__main__':
-    participant = 2
+    participant = 1
     output_path = str(parent_dir) + '/results/'
 
     # load participants intensities frob bracelet calibration

@@ -1,4 +1,3 @@
-# region Setup
 # System
 import sys
 from pathlib import Path
@@ -13,6 +12,7 @@ sys.path.append(str(root) + '/midas')
 
 # Utility
 import time
+import pandas as pd
 import numpy as np
 from playsound import playsound
 import threading
@@ -36,13 +36,10 @@ from ultralytics.nn.autobackend import AutoBackend
 # DE
 from unidepth_estimator import UniDepthEstimator # metric
 from midas_estimator import MidasDepthEstimator # relative
+from midas.run import create_side_by_side
 
 # Navigation
-#from bracelet import navigate_hand, connect_belt
 from bracelet import BraceletController, connect_belt
-# endregion
-
-# region Helpers
 
 def playstart():
     file = 'resources/sound/beginning.mp3' # ROOT
@@ -58,14 +55,16 @@ def bbs_to_depth(image, depth=None, bbs=None):
     """
     Calculate the mean depth for bounding boxes (BBs) in an image.
 
-    Parameters:
-    image (numpy.ndarray): The input image.
-    depth (numpy.ndarray, optional): The depth map corresponding to the input image. Defaults to None.
-    bbs (list of lists, optional): A list of bounding boxes, where each bounding box is represented 
+    Args:
+        image (numpy.ndarray): The input image.
+        depth (numpy.ndarray, optional): The depth map corresponding to the input image. Defaults to None.
+        bbs (list of lists, optional): A list of bounding boxes, where each bounding box is represented 
                                     as a list of 8 values [x, y, w, h, ... , mean_depth]. Defaults to None.
+
     Returns:
-    numpy.ndarray: An array of bounding boxes with updated mean depth values.
+        numpy.ndarray: An array of bounding boxes with updated mean depth values.
                    If no bounding boxes are provided, returns None.
+
     Notes:
     - If a bounding box already has a mean depth value (indicated by the 8th value not being -1), 
       it will be left unchanged.
@@ -106,9 +105,6 @@ def close_app(controller):
     controller.disconnect_belt() if controller else None
     sys.exit()
 
-# endregion
-
-# region BraceletController class
 
 class AutoAssign:
 
@@ -124,7 +120,18 @@ class TaskController(AutoAssign):
         
         super().__init__(**kwargs)
 
-    # region models loaders
+    
+    def save_output_data(self):
+
+        df = pd.DataFrame(np.array(self.output_data).reshape(len(self.output_data)//3, 3))
+        df.to_csv(self.output_path + f"controller_output_data_{self.participant}.csv")
+
+
+    def print_output_data(self):
+
+        df = pd.DataFrame(np.array(self.output_data).reshape(len(self.output_data)//3, 3))
+        print(df)
+
 
     def load_object_detector(self):
         
@@ -194,10 +201,124 @@ class TaskController(AutoAssign):
         if type == 'tracker':
             model.warmup()
 
-    # endregion
+    def get_depth(self, im0, frame, outputs, prev_outputs, frame_factor=10):
+        """
+        Estimate and update depth information for given frames.
+
+        Args:
+            im0 (numpy.ndarray): The current frame image.
+            frame (int): The current frame number.
+            outputs (numpy.ndarray): The current detection outputs.
+            prev_outputs (numpy.ndarray): The detection outputs from the previous frame.
+            frame_factor (int, optional): The interval for predicting depth. Defaults to 10.
+
+        Returns:
+            tuple: A tuple containing:
+                - depthmap (numpy.ndarray): The estimated depth map for the current frame.
+                - outputs (numpy.ndarray): The updated detection outputs with depth information.
+        """
+
+        if frame % frame_factor == 0: # for efficiency we are only predicting depth every n-th frame
+            depthmap, _ = self.depth_estimator.predict_depth(im0)
+            outputs = bbs_to_depth(im0, depthmap, outputs)
+        
+        else: # Update depth values from previous outputs
+            if prev_outputs.size > 0:
+                for output in outputs:
+                    match = prev_outputs[prev_outputs[:, 4] == output[4]]
+                    if match.size > 0:
+                        output[7] = match[0][7]
+                    else:
+                        output[7] = -1
+
+        return depthmap, outputs
+
+
+    def experiment_trial_logic(self, trial_start_time, trial_end_time, pressed_key):
+        """
+        Handles the logic for each trial in the experiment based on the pressed key.
+
+        Args:
+            trial_start_time (float): The start time of the trial.
+            trial_end_time (float): The end time of the trial.
+            pressed_key (int): The key pressed by the user.
+
+        Returns:
+            str: "break" if the experiment should end, otherwise None.
+
+        Logic:
+        - Starts the next trial if 's' is pressed and the system is ready for the next trial.
+        - Ends the trial if 'y' or 'n' is pressed and the system is not ready for the next trial.
+        - Ends the experiment if 'q' is pressed.
+        """
+
+        # end trial
+        if pressed_key in [ord('y'), ord('n')] and not self.ready_for_next_trial:
+            trial_end_time = time.time()
+            print(f'Trial time: {trial_end_time - trial_start_time}')
+            self.output_data.append(trial_end_time - trial_start_time)
+            self.output_data.append(chr(pressed_key))
+
+            self.classes_obj = self.orig_classes_obj
+            print(self.classes_obj)
+
+            self.bracelet_controller.frozen = False
+            
+            if pressed_key == ord('y'):
+                print("TRIAL SUCCESSFUL")
+            elif pressed_key == ord('n'):
+                print("TRIAL FAILED")
+            
+            if self.obj_index >= len(self.target_objs) - 1:
+                print("ALL TARGETS COVERED")
+                return "break"
+            else:
+                print("MOVING TO NEXT TARGET")
+                self.obj_index += 1
+                self.ready_for_next_trial = True
+                self.class_target_obj = -1
+        # start next trial
+        elif pressed_key == ord('s') and self.ready_for_next_trial:
+            print("STARTING NEXT TRIAL")
+            self.target_entered = False
+            self.ready_for_next_trial = False
+            self.bracelet_controller.vibrate = True
+        # end experiment
+        elif pressed_key == ord('q'):
+            if self.belt_controller:
+                self.belt_controller.stop_vibration()
+            return "break"
 
 
     def experiment_loop(self, save_dir, save_img, index_add, vid_path, vid_writer):
+        """
+        Main loop for running the experiment, processing each frame of the live stream.
+
+        Args:
+            save_dir (Path): Directory to save the results.
+            save_img (bool): Flag to save images.
+            index_add (int): Index to add to class IDs for hand detection.
+            vid_path (list): List containing the path to the video file.
+            vid_writer (list): List containing the video writer object.
+
+        Returns:
+            None
+
+        This function performs the following steps:
+            1. Initializes variables for tracking and sets up initial conditions.
+            2. Iterates over each frame of the live stream.
+            3. Pre-processes the image for object and hand detection.
+            4. Performs object and hand detection using YOLO models.
+            5. Applies non-maximal suppression to filter detections.
+            6. Updates the tracker with current frame detections.
+            7. Processes object detections and generates tracker outputs.
+            8. Calculates the difference between current and previous frames to reset object detections if rapid movement occured.
+            9. Estimates depth for detected objects if depth estimation is enabled.
+            10. Handles experimenter input for selecting the target object.
+            11. Navigates the hand based on detections and tracking information.
+            12. Visualizes and saves the results, including bounding boxes and FPS.
+            13. Manages trial logic and handles trial start and end conditions.
+        """
 
         print(f'\nSTARTING MAIN LOOP')
 
@@ -208,10 +329,16 @@ class TaskController(AutoAssign):
         outputs = []
         prev_outputs = np.array([])
 
+        self.ready_for_next_trial = True
+        self.target_entered = True # counter intuitive, but setting as True to wait for press of "s" button to start first trial
+        self.class_target_obj = -1 # placeholder value not assigned to any specific object
+        trial_start_time = -1 # placeholder initial value
+        self.orig_classes_obj = self.classes_obj
+
+        grasped = False
+
         # Data processing: Iterate over each frame of the live stream
         for frame, (path, im, im0s, vid_cap, _) in enumerate(self.dataset):
-
-            print(f'Frame {frame+1}')
 
             # Start timer for FPS measure
             start = time.perf_counter()
@@ -224,7 +351,8 @@ class TaskController(AutoAssign):
             # Image pre-processing
             with self.dt[0]:
                 image = torch.from_numpy(im).to(self.model_obj.device)
-                image = image.half() if self.model_obj.fp16 else image.float()  # uint8 to fp16/32
+                #image = image.half() if self.model_obj.fp16 else image.float()  # uint8 to fp16/32
+                image = image.half() if self.model_hand.fp16 else image.float()
                 image /= 255  # 0 - 255 to 0.0 - 1.0
                 if len(image.shape) == 3:
                     image = image[None]  # expand for batch dim
@@ -232,7 +360,7 @@ class TaskController(AutoAssign):
             # Object detection inference
             with self.dt[1]:
                 visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if self.visualize else False
-                pred_target = self.model_obj(image, augment=self.augment, visualize=visualize)
+                pred_target = self.model_obj(image, augment=self.augment, visualize=visualize) # YOLO11 runs nms by default
                 pred_hand = self.model_hand(image, augment=self.augment, visualize=visualize)
 
             # Non-maximal supression
@@ -255,7 +383,7 @@ class TaskController(AutoAssign):
             clss = torch.empty(0)
 
             # Process object detections
-            preds = torch.cat((pred_target[0], pred_hand[0]), dim=0)
+            preds = torch.cat((pred_target[0], pred_hand[0]), dim=0) # (x, y, x, y, conf, cls)
             if len(preds) > 0:
                 preds[:, :4] = scale_boxes(im.shape[2:], preds[:, :4], im0.shape).round()
                 xywhs = xyxy2xywh(preds[:, :4])
@@ -266,57 +394,24 @@ class TaskController(AutoAssign):
             if self.run_object_tracker:
                 
                 # Update previous information
-                outputs = self.tracker.update(xywhs.cpu(), confs.cpu(), clss.cpu(), im0) # takes xywhs, returns xyxys
-
-                # Add depth placeholder to outputs
-                helper_list = []
-                for bb in outputs:
-                    bb = np.append(bb, -1)
-                    helper_list.append(bb)
-                outputs = helper_list
-
-                # Get previous tracking information
-                prev_track_ids = []
-                if prev_outputs.size > 0:
-                    prev_track_ids = prev_outputs[:, 4].tolist()
+                outputs = self.tracker.update(xywhs.cpu(), confs.cpu(), clss.cpu(), im0) # (x, y, x, y, track_id, cls, conf)
                 
-                # Get current tracking information
-                tracks = self.tracker.tracker.tracks
-                track_ids = []
-                if len(outputs) > 0:
-                    track_ids = np.array(outputs)[:, 4].tolist()
+                # Kill tracks of old objects right upon starting the trial
+                if not self.ready_for_next_trial:
+                    hand_index_list = [hand + index_add for hand in self.classes_hand]
+                    outputs = [output for output in outputs if output[5] in self.classes_obj + hand_index_list]
 
-                # Revive previous information if necessary (get KF prediction for missing detections)
-                tracker_ids = [track.track_id for track in tracks]
-                # if there are more tracks than detections
-                if 0 < len(prev_track_ids) > len(track_ids):
-                    diff_ids = list(set(prev_track_ids) - set(track_ids))
-                    for diff_id in diff_ids:
-                        revivable_track = next((track for track in tracks if track.track_id == diff_id), None)
-                        if revivable_track is not None and diff_id in tracker_ids and revivable_track.state == 2:
-                            bbox_pred = revivable_track.mean[:4]
-                            if 0 <= bbox_pred[2] <= 1:
-                                bbox_pred[2] = bbox_pred[2] * bbox_pred[3] # xyah to xywh (or similar, but aspect to w)
-                            bbox_pred = np.array(bbox_pred)
-                            bbox_pred_xyxy = xywh2xyxy(bbox_pred).tolist() # convert xywh to xyxy, so all tracks in outputs can be converted together back to xywh
-                            idx = np.where(prev_outputs[:, 4] == diff_id)[0]
-                            if idx.size > 0:
-                                prev_info = prev_outputs[idx[0], 4:].tolist()
-                                # potentially set manual values for detection confidence and depth here
-                                revived_detection = np.array(bbox_pred_xyxy + prev_info)
-                                if isinstance(outputs, np.ndarray):
-                                    outputs = outputs.tolist()
-                                outputs.append(revived_detection)
+            else: # without tracking
 
-                # Convert BBs to xywh
-                for bb in outputs:
-                    bb[:4] = xyxy2xywh(bb[:4])
+                outputs = np.array(preds.cpu()) # (x, y, x, y, conf, cls)
+                outputs = np.insert(outputs, 4, -1, axis=1) # insert track_id placeholder --> (x, y, x, y, track_id, conf, cls)
+                outputs[:, [5, 6]] = outputs[:, [6, 5]] # switch cls and conf to match the output of the tracker --> (x, y, x, y, track_id, cls, conf)
 
-            # without tracking
-            else:
-                outputs = np.array(preds)
-                outputs = np.insert(outputs, 4, -1, axis=1) # insert track_id placeholder
-                outputs[:, [5, 6]] = outputs[:, [6, 5]] # switch cls and conf columns for alignment with tracker
+            # Convert xyxy to xywh
+            outputs = [np.concatenate((xyxy2xywh(bb[:4]), bb[4:])) for bb in outputs] # (x, y, w, h, track_id, cls, conf)
+
+            # Add depth placeholder to outputs
+            outputs = [np.append(bb, -1) for bb in outputs] # (x, y, w, h, track_id, conf, cls, depth)
 
             # Calculate difference between current and previous frame
             if prev_frames is not None:
@@ -325,29 +420,30 @@ class TaskController(AutoAssign):
                 mean_diff = np.mean(diff)
                 std_diff = np.std(diff)
                 if mean_diff > 30: # Big change between frames
-                    #print('High change between frames. Resetting predictions.')
                     outputs = []
-                #cv2.imshow('Diff',diff)
-                #cv2.waitKey(0)    
-
 
             # Depth estimation (automatically skips revived bbs)
-            if self.run_depth_estimator:
-                if frame % 10 == 0: # for effiency we are only predicting depth every 10th frame
-                    depthmap, _ = self.depth_estimator.predict_depth(im0)
-                    outputs = bbs_to_depth(im0, depthmap, outputs)
-                else:
+            #depth_img, outputs = self.get_depth(im0, self.transform, self.device, self.model, self.depth_estimator, self.net_w, self.net_h, vis=False, bbs=outputs) if self.run_depth_estimator else (None, outputs)
+            #depth_img, outputs = self.get_depth(im0, frame, outputs, prev_outputs, 10) if self.run_depth_estimator else (None, outputs)
 
+            if not self.run_depth_estimator:
+                depth_img = None
+            else:
+                if frame % 10 == 0: # for effiency we are only predicting depth every 10th frame
+                    depth_img, _ = self.depth_estimator.predict_depth(im0)
+                    outputs = bbs_to_depth(im0, depth_img, outputs)
+                else:
                     # Update depth values from previous outputs
                     if prev_outputs.size > 0:
                         for output in outputs:
-                            match = prev_outputs[prev_outputs[:, 4] == output[4]]
+                            if output[4] != -1: # tracking ID
+                                match = prev_outputs[prev_outputs[:, 4] == output[4]]
+                            else: # class number
+                                match = prev_outputs[prev_outputs[:, 5] == output[5]]
                             if match.size > 0:
                                 output[7] = match[0][7]
                             else:
                                 output[7] = -1
-            else:
-                depthmap = None
 
             # Set current tracking information as previous info
             prev_outputs = np.array(outputs)
@@ -358,10 +454,6 @@ class TaskController(AutoAssign):
             fps = 1 / runtime
             fpss.append(fps)
             prev_frames = curr_frames
-            
-        # endregion
-
-        # region main navigation
 
             # Get the target object class
             if not self.target_entered:
@@ -374,7 +466,7 @@ class TaskController(AutoAssign):
 
                         if target_obj_verb in coco_labels.values():
                             user_in = input("Selected object is " + target_obj_verb + ". Correct? [y,n]")
-                            class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
+                            self.class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
                             file = f'resources/sound/{target_obj_verb}.mp3'
                             #playsound(str(file))
                             # Start trial time measure (end in navigate_hand(...))
@@ -382,23 +474,32 @@ class TaskController(AutoAssign):
                             print(f'The object {target_obj_verb} is not in the list of available targets. Please reselect.')
                 else:
                     target_obj_verb = self.target_objs[self.obj_index]
-                    class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
+                    self.class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
                     file = f'resources/sound/{target_obj_verb}.mp3'
+                    self.output_data.append(self.class_target_obj)
                     #playsound(str(file))
-                    # Start trial time measure (end in navigate_hand(...))
 
                 self.target_entered = True
+                self.classes_obj = [self.class_target_obj] # only detect the target object --> filtering of detections (and therefore tracks)
+                grasped = False
+                trial_start_time = time.time()
+                vibration_timer = None
 
             # Navigate the hand based on information from last frame and current frame detections
-            grasped, curr_target = navigate_hand(self.belt_controller, outputs, class_target_obj, self.class_hand_nav, depthmap, self.metric)
-        
-            # Exit the loop if hand and object aligned horizontally and vertically and grasp signal was sent
-            if grasped:
-                if self.manual_entry and ((self.obj_index+1)<=len(self.target_objs)):
-                    self.obj_index += 1
-                self.target_entered = False
+            if not grasped:
+                grasped, curr_target = self.bracelet_controller.navigate_hand(self.belt_controller, outputs, self.class_target_obj, [hand + index_add for hand in self.classes_hand], depth_img, self.participant_vibration_intensities, self.metric)
+            else: # if grasping signal was sent stop navigation process and reset target
+                if vibration_timer is None:
+                    vibration_timer = time.time()
+                    grasped, curr_target = True, None
+                elif vibration_timer > 0:
+                    if time.time() - vibration_timer > 1.5:
+                        if self.belt_controller:
+                            self.belt_controller.stop_vibration()
+                        vibration_timer = -1
 
-        # region visualization
+        # VISUALIZATIONS
+
             # Write results
             for *xywh, obj_id, cls, conf, depth in outputs:
                 id, cls = int(obj_id), int(cls)
@@ -418,15 +519,29 @@ class TaskController(AutoAssign):
             # Display results
             im0 = annotator.result()
             if self.view_img:
-                #cv2.namedWindow("AIBox", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO) # for resizing
                 cv2.putText(im0, f'FPS: {int(fps)}, Avg: {int(np.mean(fpss))}', (20,70), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0), 1)
+                #side_by_side = create_side_by_side(im0, depth_img, False) # original image & depth side-by-side
+                #cv2.imshow("AIBox & Depth", side_by_side)
                 if self.run_depth_estimator:
-                    side_by_side = self.depth_estimator.create_depthmap(im0, depthmap, False) # original image & depth side-by-side
-                    cv2.imshow("AIBox & Depthmap", side_by_side)
+                    side_by_side = create_side_by_side(im0, depth_img, False) # original image & depth side-by-side
+                    cv2.imshow("AIBox & Depth", side_by_side)
+
                 else:
-                    cv2.imshow("AIBox", im0) # original image only
-                #cv2.resizeWindow("AIBox", im0.shape[1]//2, im0.shape[0]//2) # for resizing
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    cv2.imshow("AIBox", im0)
+                    cv2.setWindowProperty("AIBox", cv2.WND_PROP_TOPMOST, 1)
+
+                pressed_key = cv2.waitKey(1)
+
+                trial_end_time = time.time()
+
+                trial_info = self.experiment_trial_logic(trial_start_time, trial_end_time, pressed_key)
+                
+                if trial_info == "break":
+                    try:
+                        self.print_output_data()
+                        self.save_output_data()
+                    except ValueError:
+                        pass
                     break
 
             # Save results
@@ -443,12 +558,11 @@ class TaskController(AutoAssign):
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         else:  # stream
-                            fps, w, h = 30, im0.shape[1], im0.shape[0]
+                            fps, w, h = 8, im0.shape[1], im0.shape[0] # int(np.mean(fpss))
                         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
                         vid_writer[0] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer[0].write(im0)
 
-        # endregion
 
     @smart_inference_mode()
     def run(self):
@@ -528,5 +642,3 @@ class TaskController(AutoAssign):
 
         # Start experiment loop
         self.experiment_loop(save_dir, save_img, index_add, vid_path, vid_writer)
-
-# endregion

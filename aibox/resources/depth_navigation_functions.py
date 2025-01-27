@@ -3,8 +3,23 @@ import numpy as np
 from queue import PriorityQueue
 
 def map_obstacles(handBB, targetBB, depth_map, metric):
+    """
+    Maps obstacles in a depth map relative to the positions of the hand and target bounding boxes.
 
-    bbs_dilation = 5
+    Args:
+        handBB (tuple): A tuple containing the bounding box coordinates and depth information for the hand.
+                        Format: (x, y, width, height, ..., depth)
+        targetBB (tuple): A tuple containing the bounding box coordinates and depth information for the target.
+                          Format: (x, y, width, height, ..., depth)
+        depth_map (numpy.ndarray): A 2D array representing the depth map of the scene.
+        metric (bool): A boolean indicating whether the depth values are in metric units (True) or disparity (False).
+
+    Returns:
+        numpy.ndarray: A binary mask indicating the positions of obstacles in the depth map.
+    """
+
+    bbs_dilation = 10
+    obstacles_dilation = 3
 
     # Get BB information
     hand_x, hand_y, hand_w, hand_h = handBB[:4]
@@ -24,8 +39,13 @@ def map_obstacles(handBB, targetBB, depth_map, metric):
     # Object closer to camera relative to hand -> values are larger
     hand_depth = handBB[7]
 
-    #obstacle_mask = depth_map < hand_depth # binary mask
-    obstacle_mask = depth_map < hand_depth - 300 if not metric else depth_map < hand_depth
+    # relative hand depth is actually disparity, i.e. 1/estimate
+    scale = 5000
+    hand_depth = scale / hand_depth if not metric else hand_depth
+    depth_map = scale / depth_map if not metric else depth_map
+
+    # Create binary obstacle mask
+    obstacle_mask = depth_map < hand_depth
 
     # Mask hand BB
     #obstacle_mask[hand_top-bbs_dilation:hand_bottom+bbs_dilation, hand_left-bbs_dilation:hand_right+bbs_dilation] = True
@@ -36,7 +56,7 @@ def map_obstacles(handBB, targetBB, depth_map, metric):
     obstacle_mask[target_top-bbs_dilation:target_bottom+bbs_dilation, target_left-bbs_dilation:target_right+bbs_dilation] = False
 
     # Dilate obstacles
-    expanded_obstacle_mask = cv2.dilate(obstacle_mask.astype(np.uint8), np.ones((5, 5), np.uint8))
+    expanded_obstacle_mask = cv2.dilate(obstacle_mask.astype(np.uint8), np.ones((obstacles_dilation, obstacles_dilation), np.uint8))
     #depth_map[expanded_obstacle_mask > 0] = hand_depth - 5
 
     mask_rgb = cv2.cvtColor(expanded_obstacle_mask.astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR)
@@ -50,50 +70,57 @@ def check_obstacles_between_points(handBB, targetBB, depth_map, depth_threshold)
     """
     Check if there are any obstacles between two points in a depth map.
 
-    Parameters:
-    start (tuple): Starting point (x1, y1).
-    end (tuple): Ending point (x2, y2).
-    depth_map (np.array): 2D numpy array representing the depth map.
-    depth_threshold (float): Threshold below which the pixel is considered an obstacle.
+    Args:
+        start (tuple): Starting point (x1, y1).
+        end (tuple): Ending point (x2, y2).
+        depth_map (np.array): 2D numpy array representing the depth map.
+        depth_threshold (float): Threshold below which the pixel is considered an obstacle.
 
     Returns:
-    bool: True if an obstacle is found, False otherwise.
+        bool: True if an obstacle is found, False otherwise.
     """
     
     # Get BB information
-    hand_x, hand_y = handBB[:2]
-    target_x, target_y = targetBB[:2]
+    #hand_x, hand_y = handBB[:2]
+    #target_x, target_y = targetBB[:2]
+    xc_hand, yc_hand = handBB[:2]
+    xc_target, yc_target = targetBB[:2]
 
-    # Compute the difference in x and y
-    dx = hand_x - target_x
-    dy = hand_y - target_y
-    
-    # Check for line direction
-    steps = int(max(abs(dx), abs(dy)))
-    
-    # Prevent division by zero and determine step changes
-    if steps == 0:
-        return depth_map[int(hand_y), int(hand_x)] < depth_threshold
+    # If hand and target are aligned either horizontally or vertically navigate normally - TO EXPAND
+    if xc_hand == xc_target or yc_hand == yc_target:
+        return False
 
-    x_increment = dx / steps
-    y_increment = dy / steps
+    roi_depth_map = depth_map[int(min(yc_hand, yc_target)):int(max(yc_hand, yc_target)),int(min(xc_hand, xc_target)):int(max(xc_hand, xc_target))]
 
-    x, y = hand_x, hand_y
+    try:
+        mask_rgb = cv2.cvtColor(roi_depth_map.astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR)
+        cv2.imshow("roi_depth_map", mask_rgb)
+        cv2.setWindowProperty("roi_depth_map", cv2.WND_PROP_TOPMOST, 1)
+        pressed_key = cv2.waitKey(1)
+    except:
+        pass
 
-    for _ in range(steps + 1):
-        xi, yi = int(round(x)), int(round(y))
-        
-        # Check bounds
-        if 0 <= xi < depth_map.shape[1] and 0 <= yi < depth_map.shape[0]:
-            if depth_map[yi, xi] < depth_threshold:
-                return True  # Found an obstacle
-        
-        x += x_increment
-        y += y_increment
-    
-    return False  # No obstacles found
+    # Check if there is any value above the threshold
+    if np.any(roi_depth_map >= depth_threshold):
+        return True
+    else:
+        return False
 
-def find_obstacle_target_point(handBB, targetBB, obstacle_map):
+
+def find_obstacle_target_point(handBB, targetBB, obstacle_map, leeway=10):
+    """
+    Finds the target point to avoid obstacles based on the bounding boxes of the hand and the target, 
+    and the obstacle map.
+
+    Args:
+        handBB (tuple): A tuple containing the coordinates of the hand bounding box center (xc_hand, yc_hand).
+        targetBB (tuple): A tuple containing the coordinates of the target bounding box center (xc_target, yc_target).
+        obstacle_map (numpy.ndarray): A 2D array representing the obstacle map.
+        leeway (int, optional): A leeway value to adjust the target point. Default is 10.
+
+    Returns:
+        tuple: A tuple containing the coordinates of the target point (x, y) and the minimum y-coordinate of the region of interest.
+    """
 
     xc_hand, yc_hand = handBB[:2]
     xc_target, yc_target = targetBB[:2]
@@ -104,7 +131,7 @@ def find_obstacle_target_point(handBB, targetBB, obstacle_map):
     # Determine general direction of movement
     angle_radians = np.arctan2(yc_hand - yc_target, xc_target - xc_hand) # inverted y-axis
     angle = np.degrees(angle_radians) % 360
-    print(f'Angle: {angle}')
+    #print(f'Angle: {angle}')
 
     if 90 < angle < 270:
         direction = 'left'
@@ -112,105 +139,40 @@ def find_obstacle_target_point(handBB, targetBB, obstacle_map):
         direction = 'right'
 
     # Find closest obstacle point in x axis which is at least as high as hand center
-    roi_target_point = obstacle_map[:int(yc_hand),int(min(xc_hand, xc_target)):int(max(xc_hand, xc_target))]
+    #roi_target_point = obstacle_map[:int(yc_hand),int(min(xc_hand, xc_target)):int(max(xc_hand, xc_target))]
+    roi_target_point = obstacle_map[int(min(yc_hand, yc_target)):int(max(yc_hand, yc_target)),int(min(xc_hand, xc_target)):int(max(xc_hand, xc_target))]
 
-    # Find corners of obstacles (candidates for a target point)
-    dst = cv2.cornerHarris(roi_target_point,2,3,0.04)
+    roi_min_y = np.min(np.argwhere(roi_target_point)[:, 0])
+    print(roi_min_y)
 
-    #result is dilated for marking the corners, not important
-    dst = cv2.dilate(dst,None)
-    dst_np = np.array(dst)
-    print(np.max(dst_np))
+    #if roi_min_y <= 5:
+    #    return targetBB[:2], roi_min_y
 
-    # visualize
-    #corners_rgb = cv2.cvtColor(roi_target_point.astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR)
-    #corners_rgb[dst>0.01*dst.max()]=[0,0,255]
-    #cv2.imshow('corners',corners_rgb)
-
-    # Iterate through candidates
-    min_y, min_x, max_x = -1, -1, -1
-    for i in range(dst.shape[0]):
-        for j in range(dst.shape[1]):
-            if dst[i, j] > 0:
-                if min_y == -1:
-                    min_y = i
-                if min_x == -1:
-                    min_x = j
-                elif min_x > -1 and min_x > j:
-                    min_x = j
-                elif max_x < j:
-                    max_x = j
-
-
-    if 90 < angle < 270: # target on the left
-        target_point = [max_x, min_y]
-    else: # target on the right
-        target_point = [min_x, min_y]
-
-    """
-    # find max x and min y point (most top-right or top-left corner)
-    max_x, max_y = np.unravel_index(np.argmax(dst), dst.shape)
-    min_y = np.argmin(dst[max_x])
-    #corner = dst[np.argmax(dst[:,])[-1], np.argmax(dst[:])[0]]
-
-    # Threshold for an optimal value, it may vary depending on the image.
-    roi_rgb = cv2.cvtColor(roi_target_point.astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR)
-    roi_rgb[target_point[0], target_point[1]]=[0,0,255]
-
-    cv2.imshow('ROI',roi_rgb)
-    """
+    # Find corners of obstacles
+    dst = cv2.cornerHarris(roi_target_point, 2, 3, 0.04)
+    dst = cv2.dilate(dst, None)
     
-    '''
-    min_values = np.min(roi_target_point, axis=1)
-    min_indices = np.argmin(roi_target_point, axis=1)
+    # Find the x-coordinates of the corners that are above a threshold
+    corner_indices = np.argwhere(dst > 0.01 * dst.max())
+    
+    #if corner_indices.size == 0:
+    #    return [None, None]  # Return None if no corners are found
+    if corner_indices.size == 0:
+        return targetBB[:2], roi_min_y
 
-    min_indices = []
-    max_indices = []
+    min_y = np.min(corner_indices[:, 0]) + leeway
+    min_x = np.min(corner_indices[:, 1]) + leeway
+    max_x = np.max(corner_indices[:, 1]) + leeway
 
-    for i in range(roi_target_point.shape[0]):  # Iterate over rows
-        min_value = min_values[i]
-        # Get the indices of the maximum value in the current row
-        indices_for_min_value = np.where(roi_target_point[i, :] == min_value)[0]
-        
-        # Find the minimum index for the current maximum value
-        min_index = indices_for_min_value.min()
-        max_index = indices_for_min_value.max()
-        min_indices.append(min_index)
-        max_indices.append(max_index)
+    #min_x = corner_indices[corner_indices[:, 0] == min_y, 1].min()
+    #max_x = corner_indices[corner_indices[:, 0] == min_y, 1].max()
 
-    if direction == 'left': # moving from right side of the image
-        obstacle_x = max(max_indices)
-    else:
-        obstacle_x = min(min_indices)
-
-    print(f'Obstacle x within ROI: {obstacle_x}, within whole map {obstacle_x + int(min(xc_hand, xc_target))}')
-
-    # Repeat procedure for finding point in y axis for the same ROI
-
-    min_values = np.min(roi_target_point, axis=0)
-    min_indices = np.argmin(roi_target_point, axis=0)
-
-    min_indices = []
-    max_indices = []
-
-    for i in range(roi_target_point.shape[1]):  # Iterate over rows
-        min_value = min_values[i]
-        # Get the indices of the maximum value in the current row
-        indices_for_min_value = np.where(roi_target_point[:, i] == min_value)[0]
-        
-        # Find the minimum index for the current maximum value
-        min_index = indices_for_min_value.min()
-        max_index = indices_for_min_value.max()
-        min_indices.append(min_index)
-        max_indices.append(max_index)
-
-    obstacle_y = min(min_indices)
-
-    print(f'Obstacle y within ROI: {obstacle_y}, within whole map {obstacle_y}')
-    '''
-
+    # Determine target point based on direction
+    target_point = [max_x, min_y] if direction == 'left' else [min_x, min_y]
     roi_rgb = cv2.cvtColor(roi_target_point.astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR)
-    roi_rgb[target_point[0], target_point[1]]=[0,0,255]
+
+    for candidate in corner_indices:
+        cv2.circle(roi_rgb, (candidate[1], candidate[0]), radius=1, color=(0, 255, 0), thickness=-1)
     cv2.circle(roi_rgb, (target_point[0], target_point[1]), radius=5, color=(0, 0, 255), thickness=-1)
     cv2.imshow("ROI", roi_rgb)
     #cv2.setWindowProperty("ROI", cv2.WND_PROP_TOPMOST, 1)
@@ -218,14 +180,24 @@ def find_obstacle_target_point(handBB, targetBB, obstacle_map):
 
     angle_radians = np.arctan2(yc_hand - target_point[1], target_point[0] - xc_hand) # inverted y-axis
     angle = np.degrees(angle_radians) % 360
-    print(f'New angle: {angle}')
 
-    #return [obstacle_x + int(min(xc_hand, xc_target)), obstacle_y]
-    return target_point
+    return target_point, roi_min_y
 
 
 def astar(handBB, targetBB, depth_map, depth_threshold, stop_condition):
-    """A* pathfinding algorithm for continuous angles, stopping after finding x steps in the optimal trajectory."""
+    """
+    Perform A* pathfinding algorithm to navigate from hand bounding box to target bounding box on a depth map.
+    
+    Args:
+        handBB (tuple): Coordinates of the hand bounding box center (x, y).
+        targetBB (tuple): Coordinates of the target bounding box center (x, y).
+        depth_map (numpy.ndarray): 2D array representing the depth map.
+        depth_threshold (float): Minimum depth value to consider a cell traversable.
+        stop_condition (int): Maximum number of steps to include in the path.
+    
+    Returns:
+        list: List of tuples representing the path from start to goal.
+    """
 
     ANGLE_RESOLUTION = 45
 
@@ -277,7 +249,19 @@ def astar(handBB, targetBB, depth_map, depth_threshold, stop_condition):
     return path
 
 def dijkstra(handBB, targetBB, depth_map, depth_threshold, stop_condition):
-    """Dijkstra's pathfinding algorithm for continuous angles."""
+    """
+    Perform Dijkstra's algorithm to find the shortest path from the hand bounding box to the target bounding box on a depth map.
+    
+    Args:
+        handBB (tuple): A tuple (x, y, width, height) representing the bounding box of the hand.
+        targetBB (tuple): A tuple (x, y, width, height) representing the bounding box of the target.
+        depth_map (numpy.ndarray): A 2D array representing the depth map.
+        depth_threshold (float): The minimum depth value to consider a point as traversable.
+        stop_condition (int): The maximum number of steps to include in the returned path.
+
+    Returns:
+        list: A list of tuples representing the path from the hand to the target, truncated to the stop_condition length.
+    """
 
     ANGLE_RESOLUTION = 5
 
@@ -329,7 +313,21 @@ def dijkstra(handBB, targetBB, depth_map, depth_threshold, stop_condition):
     return path[:stop_condition]
 
 def fast_pathfinding(handBB, targetBB, depth_map, depth_threshold, x):
-    """Pathfinding algorithm that stops after finding the first x optimal steps."""
+    """
+    Perform fast pathfinding from a starting bounding box to a target bounding box on a depth map.
+
+    Args:
+        handBB (tuple): A tuple (xc_hand, yc_hand, width, height) representing the bounding box of the hand.
+        targetBB (tuple): A tuple (xc_target, yc_target, width, height) representing the bounding box of the target.
+        depth_map (np.ndarray): A 2D numpy array representing the depth map.
+        depth_threshold (float): The minimum depth value to consider a point as traversable.
+        x (int): The number of steps to return in the path.
+
+    Returns:
+        list: A list of tuples representing the path from the start to the goal, limited to the first x steps.
+              If the goal is not reached, an empty list is returned.
+    """
+    
 
     ANGLE_RESOLUTION = 5
 
@@ -387,7 +385,17 @@ def fast_pathfinding(handBB, targetBB, depth_map, depth_threshold, x):
 
 
 def smooth_path(path, step_size):
-    """Smooth the path by creating waypoints based on the desired step size."""
+    """
+    Smooths a given path by interpolating points based on a specified step size.
+
+    Args:
+        path (list of tuples): A list of (x, y) coordinates representing the path to be smoothed.
+        step_size (float): The maximum allowed distance between consecutive points in the smoothed path.
+        
+    Returns:
+        list of tuples: A list of (x, y) coordinates representing the smoothed path.
+    """
+    
     smoothed_path = []
 
     start = np.array(path[0])

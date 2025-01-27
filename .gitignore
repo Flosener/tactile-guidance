@@ -147,7 +147,6 @@ flobox/experiment/forms/
 flobox/experiment/plots/
 flobox/experiment/Abrechnung_VPgelder.pdf
 flobox/experiment/Data_Analysis.zip
-aibox/resources/
 aibox/midas/weights/
 aibox/example_gpu.sh
 aibox/UOS_HPC_Guide.md
