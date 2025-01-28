@@ -33,24 +33,28 @@ if __name__ == '__main__':
         help="The task to be performed by the participant."
     )
     parser.add_argument(
-        "-m", "--metric", 
-        type=bool,
-        default=True, 
+        "--relative", 
+        action="store_true",
         help="Whether metric or relative depth estimation should be used. Default: metric."
     )
     parser.add_argument(
-        "--mock_navigate", 
-        type=bool,
-        default=False, 
+        "--mock_navigate",
+        action="store_true",
         help="Whether to use mock navigation without a bracelet (for debugging)."
+    )
+    parser.add_argument(
+        "--save_video", 
+        action="store_true",
+        help="Whether to save the output video."
     )
     
     # Parse the arguments
     args = parser.parse_args()
     participant = args.participant
     condition = args.condition
-    metric = args.metric
+    metric = not args.relative
     mock_navigate = args.mock_navigate
+    save_video = args.save_video
     
     # Parameters
     weights_obj = 'yolov5s.pt'  # Object model weights path
@@ -60,7 +64,9 @@ if __name__ == '__main__':
     weights_tracker = 'osnet_x0_25_market1501.pt' # ReID weights path
 
     run_depth_estimator = True if condition == 'depth_navigation' else False
-    weights_depth_estimator = 'v2-vits14' if metric else 'midas_v21_384' # v2-vits14, v1-cnvnxtl; midas_v21_384, dpt_levit_224
+    print(args.relative, metric)
+    weights_depth_estimator = 'v2-vits14' if metric else 'midas_v21_384' # v2-vits14 (UniDepth only supports cuda), v1-cnvnxtl; midas_v21_384 (MiDaS/ZoeDepth also supports cpu), dpt_levit_224
+    print(weights_depth_estimator)
 
     source = '0' # image/video path or camera source (0 = webcam, 1 = external, ...)
     belt_controller = None
@@ -111,7 +117,8 @@ if __name__ == '__main__':
 
     try:
         bracelet_controller = BraceletController(vibration_intensities=participant_vibration_intensities)
-        task_controller = controller.TaskController(weights_obj=weights_obj,  # model_obj path or triton URL
+        task_controller = controller.TaskController(
+                        weights_obj=weights_obj,  # model_obj path or triton URL
                         weights_hand=weights_hand,  # model_obj path or triton URL
                         weights_tracker=weights_tracker,
                         weights_depth_estimator=weights_depth_estimator,
@@ -125,7 +132,7 @@ if __name__ == '__main__':
                         conf_thres=0.7,  # confidence threshold
                         save_conf=False,  # save confidences in --save-txt labels
                         save_crop=False,  # save cropped prediction boxes
-                        nosave=True,  # do not save images/videos
+                        nosave= not save_video,  # do not save images/videos
                         classes_obj=[1,39,40,41,42,45,46,47,58,74],  # filter by class /  check coco.yaml file or coco_labels variable in this script
                         classes_hand=[0,1], 
                         #class_hand_nav=[80,81],
@@ -133,10 +140,10 @@ if __name__ == '__main__':
                         augment=False,  # augmented inference
                         visualize=False,  # visualize features
                         update=False,  # update all models
-                        project=output_path+'video/',  # save results to project/name
-                        name='video',  # save results to project/name
+                        project=output_path,  # save results to project/name
+                        name='video/',  # save results to project/name
                         exist_ok=False,  # existing project/name ok, do not increment
-                        line_thickness=3,  # bounding box thickness (pixels)
+                        line_thickness=2,  # bounding box thickness (pixels)
                         hide_labels=False,  # hide labels
                         hide_conf=False,  # hide confidences
                         half=False,  # use FP16 half-precision inference

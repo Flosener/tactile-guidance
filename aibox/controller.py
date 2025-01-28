@@ -10,20 +10,18 @@ import sys
 from pathlib import Path
 
 # Use the project file packages instead of the conda packages, i.e. add to system path for import
-file = Path(__file__).resolve()
-root = file.parents[0]
-sys.path.append(str(root) + '/yolov5')
-sys.path.append(str(root) + '/strongsort')
-sys.path.append(str(root) + '/unidepth')
-sys.path.append(str(root) + '/midas')
+#file = Path(__file__).resolve()
+#root = file.parents[0]
+paths_to_add = ['yolov5/', 'strongsort/', 'unidepth/', 'midas/']
+for path in paths_to_add:
+    if path not in sys.path:
+        sys.path.append(path)
 
 # Utility
 import time
-from datetime import datetime
 import pandas as pd
 import numpy as np
 import threading
-import queue
 from playsound import playsound
 
 # Image processing
@@ -55,17 +53,6 @@ def beginning_sound():
 def play_start():
     play_start_thread = threading.Thread(target=beginning_sound, name='play_start')
     play_start_thread.start()
-
-def key_listener(key_queue = None):
-    """Thread function to listen for input for each trial."""
-    while True:
-        key = cv2.waitKey(50)
-        """
-        key = input()  # Blocks until the user inputs a key
-        if key in ['s', 'y', 'n', 'c']:  # Accept only 'y' or 'n'
-            key_queue.put((key, datetime.now()))  # Store key and timestamp
-        """
-        return key # Exit after receiving valid input
 
 
 def bbs_to_depth(image, depth=None, bbs=None):
@@ -391,12 +378,6 @@ class TaskController(AutoAssign):
 
         grasped = False
 
-        # Start key listener thread
-        key_queue = queue.Queue()  # Fresh queue for each trial
-        pressed_key = None
-        listener_thread = threading.Thread(target=key_listener, args=(key_queue,), daemon=True)
-        listener_thread.start()
-
         # Data processing: Iterate over each frame of the live stream
         for frame, (path, im, im0s, vid_cap, _) in enumerate(self.dataset):
 
@@ -405,7 +386,8 @@ class TaskController(AutoAssign):
 
             # Setup saving and visualization
             p, im0 = Path(path[0]), im0s[0].copy() # idx 0 is for first source (and we only have one source)
-            save_path = str(save_dir / p.name)  # im.jpg
+            #save_path = str(save_dir / p.name) # p.name is the source, i.e. 0
+            save_path = str(save_dir) # the file name is already created in run()
             annotator = Annotator(im0, line_width=self.line_thickness, example=str(self.names_obj))
 
             # Image pre-processing
@@ -419,7 +401,7 @@ class TaskController(AutoAssign):
 
             # Object detection inference
             with self.dt[1]:
-                visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if self.visualize else False
+                visualize = increment_path(save_dir / p.stem, mkdir=True) if self.visualize else False
                 pred_target = self.model_obj(image, augment=self.augment, visualize=visualize) # YOLO11 runs nms by default
                 pred_hand = self.model_hand(image, augment=self.augment, visualize=visualize)
 
@@ -559,42 +541,47 @@ class TaskController(AutoAssign):
 
             # VISUALIZATIONS
 
-            # Write results
+            # Write results to image using annotator
             for *xywh, obj_id, cls, conf, depth in outputs:
-                id, cls = int(obj_id), int(cls)
+                id, obj_class = int(obj_id), int(cls)
                 xyxy = xywh2xyxy(np.array(xywh))
+
                 if save_img or self.save_crop or self.view_img:
-                    label = None if self.hide_labels else (f'ID: {id} {self.master_label[cls]}' if self.hide_conf else (f'ID: {id} {self.master_label[cls]} {conf:.2f} {depth:.2f}'))
-                    annotator.box_label(xyxy, label, color=colors(cls, True))
+                    parts = []
+                    if not self.hide_labels:
+                        # Target object has different label name and color
+                        if np.array_equal(curr_target, [*xywh, obj_id, cls, conf, depth]):
+                            parts.append(f'Target ')
+                            labelcolor = (0,0,0)
+                        else:
+                            parts.append(f'{self.master_label[obj_class]} ')
+                            labelcolor = colors(obj_class, True)
 
-            # Target BB
-            if curr_target is not None:
-                for *xywh, obj_id, cls, conf, depth in [curr_target]:
-                    xyxy = xywh2xyxy(np.array(xywh))
-                    if save_img or self.save_crop or self.view_img:
-                        label = None if self.hide_labels else 'Target object'
-                        annotator.box_label(xyxy, label, color=(0,0,0))
+                        # Add information to label depending on settings
+                        if not self.hide_conf:
+                            parts.append(f'{conf*100:.0f}% ')
+                        if self.run_object_tracker:
+                            parts.append(f'ID: {id} ')
+                        if self.run_depth_estimator:
+                            parts.append(f'Depth: {depth:.2f}m' if self.metric else f'Depth: {depth:.2f}')
 
-            # Display results
+                    label = ''.join(parts)
+
+                    annotator.cv_font = cv2.FONT_HERSHEY_SIMPLEX # only HERSHEY FONTS are supported by opencv
+                    annotator.tf = max(annotator.lw - 1, 1)  # font thickness (lw = linewidth)
+                    annotator.sf = annotator.lw / 3  # font scale
+                    annotator.box_label(xyxy, label, color=labelcolor)
             im0 = annotator.result()
+
+            # Display results using open-cv
             if self.view_img:
-                cv2.putText(im0, f'FPS: {int(fps)}, Avg: {int(np.mean(fpss))}', (20,70), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0), 1)
-                #side_by_side = create_side_by_side(im0, depth_img, False) # original image & depth side-by-side
-                #cv2.imshow("AIBox & Depth", side_by_side)
+                cv2.putText(im0, f'FPS: {int(fps)}, Avg: {int(np.mean(fpss))}', (20,70), annotator.cv_font, 1.0, (0,255,0), 1)
                 if self.run_depth_estimator:
                     side_by_side = create_side_by_side(im0, depth_img, False) # original image & depth side-by-side
                     cv2.imshow("AIBox & Depth", side_by_side)
-
                 else:
                     cv2.imshow("AIBox", im0)
                     cv2.setWindowProperty("AIBox", cv2.WND_PROP_TOPMOST, 1)
-                
-                """
-                # Check if a key has been pressed
-                if not key_queue.empty():
-                    pressed_key, trial_end_time = key_queue.get()
-                    print(key_queue)
-                """
 
                 pressed_key = cv2.waitKey(1)
                 trial_info = self.experiment_trial_logic(pressed_key)
@@ -602,7 +589,7 @@ class TaskController(AutoAssign):
                 if trial_info == "break":
                     break
 
-            # Save results
+            # Save results to video (or image)
             if save_img:
                 if self.dataset.mode == 'image':
                     cv2.imwrite(save_path, im0)
@@ -616,7 +603,8 @@ class TaskController(AutoAssign):
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         else:  # stream
-                            fps, w, h = 8, im0.shape[1], im0.shape[0] # int(np.mean(fpss))
+                            # creating the video writer with less fps than there actually are (< ~9), the saved video will just be green.
+                            fps, w, h = 10.0, im0.shape[1], im0.shape[0]
                         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
                         vid_writer[0] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer[0].write(im0)
@@ -648,9 +636,14 @@ class TaskController(AutoAssign):
         if is_url and is_file:
             source = check_file(source)  # download
 
-        save_dir = increment_path(Path(self.project) / self.name, exist_ok=self.exist_ok)  # increment run
-        if save_img:
-            (save_dir / 'labels' if self.save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+        # Set output directory for videos
+        base_dir = Path(self.project) / self.name
+        base_dir.mkdir(parents=True, exist_ok=True)
+        # Find the highest counter value in the existing files and increment counter for new file
+        existing_files = list(base_dir.glob(f'{self.condition}_participant_{self.participant}_trial*'))
+        max_counter = max([int(f.stem.split('_')[-1].replace('trial', '')) for f in existing_files if f.stem.split('_')[-1].replace('trial', '').isdigit()]) if existing_files else 0
+        new_counter = max_counter + 1
+        save_dir = base_dir / f'{self.condition}_participant_{self.participant}_trial_{new_counter}'
 
         # Load object detection models
         self.load_object_detector()

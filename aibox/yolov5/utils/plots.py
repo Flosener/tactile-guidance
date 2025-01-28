@@ -36,6 +36,10 @@ class Colors:
         # hex = matplotlib.colors.TABLEAU_COLORS.values()
         hexs = ('FF3838', 'FF9D97', 'FF701F', 'FFB21D', 'CFD231', '48F90A', '92CC17', '3DDB86', '1A9334', '00D4BB',
                 '2C99A8', '00C2FF', '344593', '6473FF', '0018EC', '8438FF', '520085', 'CB38FF', 'FF95C8', 'FF37C7')
+        # own
+        hexs = ('F7EACE', '5C93FA', '88FA78', 'FABD3F', 'BC8F89', '8995A5', '7EA87B', 'A89061', '2C8020', 'BA8FFF',
+                'D1220D', 'DF7969', 'BE5DBD', '72BED1', '9E6A00', 'D14536', '653EA3', 'DBBDF4', '044B95', '8CCC57')
+        
         self.palette = [self.hex2rgb(f'#{c}') for c in hexs]
         self.n = len(self.palette)
 
