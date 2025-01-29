@@ -50,6 +50,8 @@ class BraceletController:
         self.is_inside = False
         self.is_touched = False
         self.obstacle_target = None
+        self.corners = None
+        self.roi_coords = None
         self.roi_min_y = -1
         self.navigation_time = 'NA'
         self.freezing_time = 'NA'
@@ -399,7 +401,7 @@ class BraceletController:
                     self.obstacle_target = None
                     right_int, left_int, top_int, bot_int, depth_int = self.get_intensity(hand, target, vibration_intensities)
                 else:
-                    self.obstacle_target, self.roi_min_y = find_obstacle_target_point(hand, target, obstacles_mask)
+                    self.obstacle_target, self.corners, self.roi_coords, self.roi_min_y = find_obstacle_target_point(hand, target, obstacles_mask)
                     if self.roi_min_y > 5:
                         right_int, left_int, top_int, bot_int, depth_int = self.get_intensity(hand, self.obstacle_target, vibration_intensities, depth_img)
                     else:

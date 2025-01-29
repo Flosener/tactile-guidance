@@ -13,7 +13,6 @@ from pathlib import Path
 file = Path(__file__).resolve()
 root = file.parents[0]
 paths_to_add = ['/yolov5', '/strongsort', '/unidepth', '/midas']
-print(root, sys.path)
 for path in paths_to_add:
     if str(root) + path not in sys.path:
         sys.path.append(str(root) + path)
@@ -151,7 +150,7 @@ class TaskController(AutoAssign):
         output_data_row.append(self.bracelet_controller.grasping_time) # time when grasping signal was sent
 
         output_data_row.append(self.trial_end_time) # end time of the trial
-
+        
         self.trial_start_time = 'NA'
         self.trial_end_time = 'NA'
 
@@ -393,6 +392,9 @@ class TaskController(AutoAssign):
         self.class_target_obj = -1 # placeholder value not assigned to any specific object
         self.orig_classes_obj = self.classes_obj
 
+        self.trial_start_time = 'NA'
+        self.trial_end_time = 'NA'
+
         grasped = False
 
         # Data processing: Iterate over each frame of the live stream
@@ -579,7 +581,7 @@ class TaskController(AutoAssign):
                         if self.run_object_tracker:
                             parts.append(f'ID: {id} ')
                         if self.run_depth_estimator:
-                            parts.append(f'Depth: {depth:.2f}m' if self.metric else f'Depth: {depth:.2f}')
+                            parts.append(f'Depth: {depth:.2f}m' if self.metric else f'Depth: {5000 / depth:.2f}') # 5000 is the scale set in depth_navigation_functions.py
 
                     label = ''.join(parts)
 
@@ -592,7 +594,18 @@ class TaskController(AutoAssign):
             # Display results using open-cv
             if self.view_img:
                 cv2.putText(im0, f'FPS: {int(fps)}, Avg: {int(np.mean(fpss))}', (20,70), annotator.cv_font, 1.0, (0,255,0), 1)
+
                 if self.run_depth_estimator:
+                    # Draw corners and new target point on im0
+                    if self.bracelet_controller.roi_coords is not None:
+                        (minyc, maxyc, minxc, maxxc) = self.bracelet_controller.roi_coords
+                    if self.bracelet_controller.obstacle_target is not None:
+                        cv2.circle(im0, (self.bracelet_controller.obstacle_target[0]+minxc, self.bracelet_controller.obstacle_target[1]+minyc), radius=5, color=(0, 0, 255), thickness=-1)
+                    if self.bracelet_controller.corners is not None:
+                        for corner in self.bracelet_controller.corners:
+                            cv2.circle(im0, (corner[1]+minxc, corner[0]+minyc), radius=1, color=(0, 255, 0), thickness=-1)
+                    
+                    # Visulaize a side-by-side image of the scene (with target point calculation) and depth map
                     side_by_side = create_side_by_side(im0, depth_img, False) # original image & depth side-by-side
                     cv2.imshow("AIBox & Depth", side_by_side)
                 else:
