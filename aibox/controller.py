@@ -598,9 +598,12 @@ class TaskController(AutoAssign):
                 if self.run_depth_estimator:
                     # Draw corners and new target point on im0
                     if self.bracelet_controller.roi_coords is not None:
+                        print(f'coords: {self.bracelet_controller.roi_coords}')
                         (minyc, maxyc, minxc, maxxc) = self.bracelet_controller.roi_coords
                     if self.bracelet_controller.obstacle_target is not None:
-                        cv2.circle(im0, (self.bracelet_controller.obstacle_target[0]+minxc, self.bracelet_controller.obstacle_target[1]+minyc), radius=5, color=(0, 0, 255), thickness=-1)
+                        target_x, target_y = map(int, self.bracelet_controller.obstacle_target)
+                        print(f'target: {self.bracelet_controller.obstacle_target}')
+                        cv2.circle(im0, (target_x+minxc, target_y+minyc), radius=5, color=(0, 0, 255), thickness=-1)
                     if self.bracelet_controller.corners is not None:
                         for corner in self.bracelet_controller.corners:
                             cv2.circle(im0, (corner[1]+minxc, corner[0]+minyc), radius=1, color=(0, 255, 0), thickness=-1)

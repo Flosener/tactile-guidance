@@ -69,9 +69,7 @@ if __name__ == '__main__':
     weights_tracker = 'osnet_x0_25_market1501.pt' # ReID weights path
 
     run_depth_estimator = True if condition == 'depth_navigation' else False
-    print(args.relative, metric)
     weights_depth_estimator = 'v2-vits14' if metric else 'midas_v21_384' # v2-vits14 (UniDepth only supports cuda), v1-cnvnxtl; midas_v21_384 (MiDaS/ZoeDepth also supports cpu), dpt_levit_224
-    print(weights_depth_estimator)
 
     source = '0' # image/video path or camera source (0 = webcam, 1 = external, ...)
     belt_controller = None

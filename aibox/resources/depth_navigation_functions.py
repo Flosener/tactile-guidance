@@ -157,7 +157,7 @@ def find_obstacle_target_point(handBB, targetBB, obstacle_map, leeway=10):
     #if corner_indices.size == 0:
     #    return [None, None]  # Return None if no corners are found
     if corner_indices.size == 0:
-        return targetBB[:2], roi_min_y
+        return targetBB[:2], corner_indices, roi_coords, roi_min_y
 
     min_y = np.min(corner_indices[:, 0]) + leeway
     min_x = np.min(corner_indices[:, 1]) + leeway
