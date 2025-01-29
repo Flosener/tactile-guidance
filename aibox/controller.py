@@ -10,12 +10,13 @@ import sys
 from pathlib import Path
 
 # Use the project file packages instead of the conda packages, i.e. add to system path for import
-#file = Path(__file__).resolve()
-#root = file.parents[0]
-paths_to_add = ['yolov5/', 'strongsort/', 'unidepth/', 'midas/']
+file = Path(__file__).resolve()
+root = file.parents[0]
+paths_to_add = ['/yolov5', '/strongsort', '/unidepth', '/midas']
+print(root, sys.path)
 for path in paths_to_add:
-    if path not in sys.path:
-        sys.path.append(path)
+    if str(root) + path not in sys.path:
+        sys.path.append(str(root) + path)
 
 # Utility
 import time
@@ -135,17 +136,45 @@ class TaskController(AutoAssign):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.variables = ['object_class', 'start_time', 'navigation_time', 'freezing_time', 'grasping_time', 'end_time', 'key']
+
+
+    def append_output_data(self):
+
+        output_data_row = []
+
+        output_data_row.append(self.class_target_obj) # class of the target object
+
+        output_data_row.append(self.trial_start_time) # start time of the trial
+
+        output_data_row.append(self.bracelet_controller.navigation_time) # time when first navigation signal is sent (both target and hand are detected)
+        output_data_row.append(self.bracelet_controller.freezing_time) # time when target object was frozen for the first time
+        output_data_row.append(self.bracelet_controller.grasping_time) # time when grasping signal was sent
+
+        output_data_row.append(self.trial_end_time) # end time of the trial
+
+        self.trial_start_time = 'NA'
+        self.trial_end_time = 'NA'
+
+        self.bracelet_controller.navigation_time = 'NA'
+        self.bracelet_controller.freezing_time = 'NA'
+        self.bracelet_controller.grasping_time = 'NA'
+        
+        output_data_row.append(chr(self.pressed_key)) # key pressed by the user
+
+        output_data_row.append(self.bracelet_controller.target_detections_list) # list of target detections across the trial
+        output_data_row.append(self.bracelet_controller.target_confidence_list) # list of target detection confidence across the trial
+
+        self.bracelet_controller.target_detections_list = []
+        self.bracelet_controller.target_confidence_list = []
+
+        self.output_data.append(output_data_row)
+
+        print(self.output_data)
 
     
     def save_output_data(self):
-        # Fill missing values with NA for reshaping
-        n = len(self.variables)
-        if len(self.output_data) % n != 0:
-            missing_data = (n - len(self.output_data) % n) * ['NA']
-            self.output_data.extend(missing_data)
-        
-        df = pd.DataFrame(np.array(self.output_data).reshape(len(self.output_data)//n, n), columns=self.variables)
+
+        df = pd.DataFrame(self.output_data)
         print(df)
         df.to_csv(self.output_path + f"{self.condition}_participant_{self.participant}.csv")
 
@@ -273,28 +302,21 @@ class TaskController(AutoAssign):
         # end trial
         if pressed_key in [ord('y'), ord('n'), ord('f'), ord('t')] and not self.ready_for_next_trial:
 
-            trial_end_time = time.time()
-            self.output_data.append(trial_end_time)
-            self.output_data.append(self.bracelet_controller.navigation_time)
-            self.output_data.append(self.bracelet_controller.freezing_time)
-            self.output_data.append(self.bracelet_controller.grasping_time)
-            self.bracelet_controller.navigation_time = 'NA'
-            self.bracelet_controller.freezing_time = 'NA'
-            self.bracelet_controller.grasping_time = 'NA'
+            self.trial_end_time = time.time()
 
-            self.output_data.append(chr(pressed_key))
+            self.append_output_data()
 
             self.classes_obj = self.orig_classes_obj
 
             self.bracelet_controller.frozen = False
             
-            if pressed_key == ord('y'):
+            if pressed_key == ord('y'): # participant successfully reached the target
                 print("TRIAL SUCCESSFUL")
-            elif pressed_key == ord('n'):
+            elif pressed_key == ord('n'): # participant failed to reach the target
                 print("TRIAL FAILED")
-            elif pressed_key == ord('f'):
+            elif pressed_key == ord('f'): # system failed to navigate hand towards the target (e.g., object not detected)
                 print("SYSTEM FAILED")
-            elif pressed_key == ord('t'):
+            elif pressed_key == ord('t'): # incorrect target was reached by the participant
                 print("WRONG TARGET")
             
             if self.obj_index >= len(self.target_objs) - 1:
@@ -310,8 +332,8 @@ class TaskController(AutoAssign):
         # start next trial
         elif pressed_key == ord('s') and self.ready_for_next_trial:
             print("STARTING NEXT TRIAL")
-            trial_start_time = time.time()
-            self.output_data.append(trial_start_time)
+            self.trial_start_time = time.time()
+            #self.output_data.append(trial_start_time)
             self.target_entered = False
             self.ready_for_next_trial = False
             self.bracelet_controller.vibrate = True
@@ -319,12 +341,7 @@ class TaskController(AutoAssign):
         # end experiment
         elif pressed_key == ord('c'): # 'q' interferes with opencv
 
-            self.output_data.append(self.bracelet_controller.navigation_time)
-            self.output_data.append(self.bracelet_controller.freezing_time)
-            self.output_data.append(self.bracelet_controller.grasping_time)
-
-            self.output_data.append(chr(pressed_key))
-
+            self.append_output_data()
             self.save_output_data()
 
             if self.belt_controller:
@@ -518,7 +535,6 @@ class TaskController(AutoAssign):
                     target_obj_verb = self.target_objs[self.obj_index]
                     self.class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
                     file = f'resources/sound/{target_obj_verb}.mp3'
-                    self.output_data.append(self.class_target_obj)
                     #playsound(str(file))
 
                 self.target_entered = True
@@ -583,8 +599,8 @@ class TaskController(AutoAssign):
                     cv2.imshow("AIBox", im0)
                     cv2.setWindowProperty("AIBox", cv2.WND_PROP_TOPMOST, 1)
 
-                pressed_key = cv2.waitKey(1)
-                trial_info = self.experiment_trial_logic(pressed_key)
+                self.pressed_key = cv2.waitKey(1)
+                trial_info = self.experiment_trial_logic(self.pressed_key)
                 
                 if trial_info == "break":
                     break

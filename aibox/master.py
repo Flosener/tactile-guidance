@@ -1,7 +1,12 @@
 import sys
 import os
+from pathlib import Path
 
 # Use the project file packages instead of the conda packages, i.e. add to system path for import
+file = Path(__file__).resolve()
+root = file.parents[0]
+os.chdir(root)
+
 sys.path.append('/yolov5')
 sys.path.append('/strongsort')
 sys.path.append('/midas')

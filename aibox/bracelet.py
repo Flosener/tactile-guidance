@@ -54,6 +54,8 @@ class BraceletController:
         self.navigation_time = 'NA'
         self.freezing_time = 'NA'
         self.grasping_time = 'NA'
+        self.target_confidence_list = []
+        self.target_detections_list = []
 
 
     def choose_detection(self, bboxes, previous_bbox=None, hand=False, w=1920, h=1080):
@@ -338,11 +340,22 @@ class BraceletController:
         target = self.choose_detection(bboxes_objects, self.prev_target, hand=False)
         self.prev_target = target
 
+        if self.navigation_time != 'NA':
+            if target is not None:
+                self.target_detections_list.append(1)
+                self.target_confidence_list.append(target[6])
+            else:
+                self.target_detections_list.append(0)
+                self.target_confidence_list.append(0)
+
         if hand is not None and target is not None:
 
             # Save navigation start timestamp
-            if self.navigation_time is None:
+            if self.navigation_time == 'NA':
                 self.navigation_time = time.time()
+                self.target_detections_list.append(1)
+                self.target_confidence_list.append(target[6])
+
             # Get varying vibration intensities depending on angle from hand to target
             # Navigation without depth map
             if depth_img is None:
