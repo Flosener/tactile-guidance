@@ -27,7 +27,7 @@ def calibrate_intensity(direction):
     Returns:
         intensity: The final calibrated intensity value.
     """
-    intensity = 5 # initial value
+    intensity = 50 # initial value
     orientation_mapping = {"bottom": 60,
                            "top": 90,
                            "left": 120,
@@ -64,7 +64,7 @@ def calibrate_intensity(direction):
 
 if __name__ == '__main__':
 
-    participant = 0
+    participant = 2
     output_path = str(parent_dir) + '/results/calibration/'
 
     if not os.path.exists(output_path):

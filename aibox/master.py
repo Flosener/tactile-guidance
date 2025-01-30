@@ -75,7 +75,7 @@ if __name__ == '__main__':
     belt_controller = None
 
     # Experiment controls
-    target_objs = ['bottle', 'bicycle', 'potted plant', 'bowl', 'cup'] * 2 if condition == 'grasping' else ['bottle'] * 5
+    target_objs = ['bottle', 'clock', 'potted plant', 'bowl', 'cup'] * 2 if condition == 'grasping' else ['bottle'] * 10
     output_path = 'results/' + f'{condition}/'
 
     if not os.path.exists(output_path):
