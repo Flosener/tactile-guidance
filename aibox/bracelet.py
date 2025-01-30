@@ -58,6 +58,10 @@ class BraceletController:
         self.grasping_time = 'NA'
         self.target_confidence_list = []
         self.target_detections_list = []
+        self.target_class_list = []
+        self.target_class_track_ids = []
+        self.target_object_track_ids = []
+        self.target_position = []
 
 
     def choose_detection(self, bboxes, previous_bbox=None, hand=False, w=1920, h=1080):
@@ -346,9 +350,18 @@ class BraceletController:
             if target is not None:
                 self.target_detections_list.append(1)
                 self.target_confidence_list.append(target[6])
+                for target_class_object in bboxes_objects:
+                    self.target_class_list.append(int(target_class_object[4]))
+                self.target_class_track_ids.append(self.target_class_list)
+                self.target_class_list = []
+                self.target_object_track_ids.append(int(target[4]))
+                self.target_position.append([target[0], target[1]])
             else:
                 self.target_detections_list.append(0)
                 self.target_confidence_list.append(0)
+                self.target_class_track_ids.append([])
+                self.target_object_track_ids.append('NA')
+                self.target_position.append([0, 0])
 
         if hand is not None and target is not None:
 
@@ -357,6 +370,13 @@ class BraceletController:
                 self.navigation_time = time.time()
                 self.target_detections_list.append(1)
                 self.target_confidence_list.append(target[6])
+                for target_class_object in bboxes_objects:
+                    self.target_class_list.append(int(target_class_object[4]))
+                self.target_class_track_ids.append(self.target_class_list)
+                self.target_class_list = []
+                self.target_object_track_ids.append(int(target[4]))
+                self.target_position.append([target[0], target[1]])
+
 
             # Get varying vibration intensities depending on angle from hand to target
             # Navigation without depth map

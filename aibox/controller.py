@@ -166,6 +166,14 @@ class TaskController(AutoAssign):
         self.bracelet_controller.target_detections_list = []
         self.bracelet_controller.target_confidence_list = []
 
+        output_data_row.append(self.bracelet_controller.target_class_track_ids) # list of IDs of detected objects of the target class
+        output_data_row.append(self.bracelet_controller.target_object_track_ids) # ID of the selected target object
+        output_data_row.append(self.bracelet_controller.target_position) # information about target center position
+
+        self.bracelet_controller.target_class_track_ids = []
+        self.bracelet_controller.target_object_track_ids = []
+        self.bracelet_controller.target_position = []
+
         self.output_data.append(output_data_row)
 
         print(self.output_data)
@@ -175,7 +183,7 @@ class TaskController(AutoAssign):
 
         df = pd.DataFrame(self.output_data)
         print(df)
-        df.to_csv(self.output_path + f"{self.condition}_participant_{self.participant}.csv")
+        df.to_csv(self.output_path + f"{self.condition}_participant_{self.participant}.csv", index=False)
 
 
     def load_object_detector(self):
