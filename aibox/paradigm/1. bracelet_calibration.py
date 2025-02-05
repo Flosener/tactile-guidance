@@ -30,8 +30,8 @@ def calibrate_intensity(direction):
     intensity = 50 # initial value
     orientation_mapping = {"bottom": 60,
                            "top": 90,
-                           "left": 120,
-                           "right": 45}
+                           "left": 45,
+                           "right": 120}
     orientation = orientation_mapping[direction]
 
     while True:
@@ -64,7 +64,7 @@ def calibrate_intensity(direction):
 
 if __name__ == '__main__':
 
-    participant = 2
+    participant = 4
     output_path = str(parent_dir) + '/results/calibration/'
 
     if not os.path.exists(output_path):

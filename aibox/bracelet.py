@@ -455,7 +455,8 @@ class BraceletController:
             if not self.frozen:
                 overlapping, self.frozen_x, self.frozen_y, self.frozen_w, self.frozen_h, self.frozen = self.check_overlap(hand, target, self.frozen)
             elif self.frozen:
-                self.freezing_time = time.time()
+                if self.freezing_time == 'NA':
+                    self.freezing_time = time.time()
                 overlapping, self.frozen_x, self.frozen_y, self.frozen_w, self.frozen_h, self.frozen = self.check_overlap(hand, frozenBB, self.frozen)
                 frozen_target[:4] = frozenBB
 
