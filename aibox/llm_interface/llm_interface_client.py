@@ -1,6 +1,7 @@
 import aiohttp
 import json
 from typing import Optional, Dict, Any
+from labels import coco_labels
 
 class LLMInterfaceClient:
     """
@@ -46,6 +47,31 @@ class LLMInterfaceClient:
                 self.token = data["access_token"]
             else:
                 raise Exception("Authentication failed")
+
+    def _get_additional_data(self, label: str) -> Dict[str, Any]:
+        """Get additional data based on the function label"""
+        if label == "object-and-hand-recognition":
+            valid_object_ids = [1, 39, 40, 41, 42, 45, 46, 47, 58, 74] # Same as classes_obj in master.py
+
+            return {
+                "available_objects": [
+                    {"id": str(id), "name": coco_labels[id], "description": f"A {coco_labels[id]} that can be {'grasped' if id in [39, 41, 45] else 'detected'}"} 
+                    for id in valid_object_ids
+                ]
+            }
+        elif label == "command-interface":
+            return {
+                "available_commands": [
+                    {"command": "s", "description": "Start a new trial"},
+                    {"command": "y", "description": "Confirm successful grasp"},
+                    {"command": "n", "description": "Indicate failed grasp"},
+                    {"command": "t", "description": "Wrong target was grasped"},
+                    {"command": "f", "description": "System failure occurred"},
+                    {"command": "q", "description": "Quit the system"},
+                    {"command": "c", "description": "Cancel current trial"}
+                ]
+            }
+        return {}
 
     async def invoke(self, message: str) -> Dict[Any, Any]:
         """
