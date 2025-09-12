@@ -142,7 +142,8 @@ if __name__ == '__main__':
                         half=False,  # use FP16 half-precision inference
                         dnn=False,  # use OpenCV DNN for ONNX inference
                         vid_stride=1,  # video frame-rate stride_obj
-                        manual_entry=False, # True means you will control the exp manually versus the standard automatic running
+                        use_llm=True, # whether to use the LLM interface to augment the instructions
+                        manual_entry=True, # True means you will control the exp manually versus the standard automatic running
                         run_object_tracker=run_object_tracker,
                         run_depth_estimator=run_depth_estimator,
                         mock_navigate=mock_navigate,

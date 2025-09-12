@@ -47,6 +47,8 @@ from unidepth_estimator import UniDepthEstimator # metric
 from midas_estimator import MidasDepthEstimator # relative
 from midas.run import create_side_by_side
 
+# Context-Aware LLM Navigation Interface integration
+from llm_interface import llm_guidance_interface
 
 def beginning_sound():
     file = 'resources/sound/beginning.mp3'
@@ -149,6 +151,8 @@ class TaskController(AutoAssign):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.variables = ['object_class', 'start_time', 'navigation_time', 'freezing_time', 'grasping_time', 'end_time', 'key']
+        self.use_llm = kwargs.get('use_llm', False)
+        self.llm_interface = llm_guidance_interface.LLMGuidanceInterface() if self.use_llm else None
 
     
     def save_output_data(self):
@@ -380,10 +384,11 @@ class TaskController(AutoAssign):
         # Initialize vars for tracking
         prev_frames = None
         curr_frames = None
+        vibration_timer = None
         fpss = []
         outputs = []
         prev_outputs = np.array([])
-
+        
         self.ready_for_next_trial = True
         self.target_entered = True # counter intuitive, but setting as True to wait for press of "s" button to start first trial
         self.class_target_obj = -1 # placeholder value not assigned to any specific object
@@ -517,7 +522,7 @@ class TaskController(AutoAssign):
 
             # Get the target object class
             if not self.target_entered:
-                if self.manual_entry:
+                if self.manual_entry and not self.use_llm:
                     user_in = "n"
                     while user_in == "n":
                         print("These are the available objects:")
@@ -532,7 +537,7 @@ class TaskController(AutoAssign):
                             # Start trial time measure (end in navigate_hand(...))
                         else:
                             print(f'The object {target_obj_verb} is not in the list of available targets. Please reselect.')
-                else:
+                elif not self.manual_entry and not self.use_llm:
                     target_obj_verb = self.target_objs[self.obj_index]
                     self.class_target_obj = next(key for key, value in coco_labels.items() if value == target_obj_verb)
                     file = f'resources/sound/{target_obj_verb}.mp3'
@@ -596,7 +601,39 @@ class TaskController(AutoAssign):
                     print(key_queue)
                 """
 
+                # Check both CV2 key input and LLM interface
                 pressed_key = cv2.waitKey(1)
+                
+                # Check LLM interface output queue
+                if self.use_llm and not self.llm_interface.output_queue.empty():
+                    llm_command = self.llm_interface.output_queue.get()
+                    print(f"Received command from LLM: {llm_command!r}")
+                    if llm_command == 's':
+                        pressed_key = ord('s')
+                    elif llm_command == 'y':
+                        pressed_key = ord('y')
+                    elif llm_command == 'n':
+                        pressed_key = ord('n')
+                    elif llm_command == 'f':
+                        pressed_key = ord('f')
+                    elif llm_command == 't':
+                        pressed_key = ord('t')
+                    elif llm_command == 'c':
+                        pressed_key = ord('c')
+                    else:
+                        # Handle object selection
+                        try:
+                            object_id = int(llm_command)
+                            if object_id in [1, 39, 40, 41, 42, 45, 46, 47, 58, 74]: # valid object IDs
+                                self.target_obj_verb = coco_labels[object_id]
+                                self.class_target_obj = object_id
+                                self.output_data.append(self.class_target_obj)
+                                self.target_entered = True
+                                self.classes_obj = [self.class_target_obj]
+                                print(f"Selected target object: {self.target_obj_verb} (ID: {object_id})")
+                        except ValueError:
+                            print(f"Invalid object ID from LLM interface: {llm_command}")
+                
                 trial_info = self.experiment_trial_logic(pressed_key)
                 
                 if trial_info == "break":
@@ -624,15 +661,19 @@ class TaskController(AutoAssign):
 
     @smart_inference_mode()
     def run(self):
-
+        # Initialize experiment variables
+        self.obj_index = 0
+        
         # Experiment setup
-        if not self.manual_entry:
-            target_objs = self.target_objs
-            self.obj_index = 0
-            print(f'The experiment will be run automatically. The selected target objects, in sequence, are:\n{target_objs}')
-        else:
+        if self.use_llm:
+            self.llm_interface.start()
+            print('The experiment will be run via the LLM interface. You can type in natural language to control the experiment.')
+        elif self.manual_entry:
             print('The experiment will be run manually. You will enter the desired target for each run yourself.')
-
+        else:
+            target_objs = self.target_objs
+            print(f'The experiment will be run automatically. The selected target objects, in sequence, are:\n{target_objs}')
+        
         horizontal_in, vertical_in = False, False
         self.target_entered = False
         #play_start()  # play welcome sound
