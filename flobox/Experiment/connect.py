@@ -80,15 +80,29 @@ def interactive_belt_connect(belt_controller):
             print("Select the serial COM port to use.")
             for i, port in enumerate(ports):
                 print("{}. {}".format((i + 1), port[0]))
+                try:    
+                    port_name = i
+                    print("   {}".format(port_name))
+                    belt_selection_int = int(port_name)
+                    print("Connect the belt.")
+                    belt_controller.connect(ports[belt_selection_int - 1][0])
+                except Exception as e:
+                    print(e)
+                    pass
+
+            """
             belt_selection = input("[1-{}]".format(len(ports)))
             try:
-                belt_selection_int = int(belt_selection)
+                #belt_selection_int = int(belt_selection)
+
             except ValueError:
                 print("Unrecognized input.")
                 return belt_controller
-            print("Connect the belt.")
-            belt_controller.connect(ports[belt_selection_int - 1][0])
+            """
+          
 
+            
+    
     else:
         print("Unrecognized input.")
         return belt_controller

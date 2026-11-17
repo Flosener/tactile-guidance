@@ -62,7 +62,7 @@ if __name__ == '__main__':
     run_depth_estimator = True if condition == 'depth_navigation' else False
     weights_depth_estimator = 'v2-vits14' if metric else 'midas_v21_384' # v2-vits14, v1-cnvnxtl; midas_v21_384, dpt_levit_224
 
-    source = '0' # image/video path or camera source (0 = webcam, 1 = external, ...)
+    source = '1' # image/video path or camera source (0 = webcam, 1 = external, ...)
     belt_controller = None
 
     # Experiment controls

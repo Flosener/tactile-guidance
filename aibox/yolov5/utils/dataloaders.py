@@ -363,11 +363,26 @@ class LoadStreams:
             if s == 0:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
-            cap = cv2.VideoCapture(s)
+
+            # Force V4L2 backend and uncompressed YUYV on Linux for local USB webcams
+            if isinstance(s, int) and os.name == 'posix':
+                cap = cv2.VideoCapture(s, cv2.CAP_V4L2)
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            else:
+                cap = cv2.VideoCapture(s)
+
             assert cap.isOpened(), f'{st}Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)  # warning: may return 0 or nan
+
+            # Log active camera pixel format (FOURCC)
+            fourcc_int = int(cap.get(cv2.CAP_PROP_FOURCC))
+            fourcc_str = "".join([chr((fourcc_int >> 8 * k) & 0xFF) for k in range(4)])
+            LOGGER.info(f'Camera active pixel format: {fourcc_str}')
+
             self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infinite stream fallback
             self.fps[i] = max((fps if math.isfinite(fps) else 0) % 100, 0) or 30  # 30 FPS fallback
 
@@ -399,7 +414,13 @@ class LoadStreams:
                 else:
                     LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
-                    cap.open(stream)  # re-open stream if signal was lost
+                    if isinstance(stream, int) and os.name == 'posix':
+                        cap.open(stream, cv2.CAP_V4L2)
+                        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    else:
+                        cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
 
     def __iter__(self):

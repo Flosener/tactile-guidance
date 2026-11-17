@@ -56,6 +56,7 @@ def play_start():
     play_start_thread = threading.Thread(target=beginning_sound, name='play_start')
     play_start_thread.start()
 
+
 def key_listener(key_queue = None):
     """Thread function to listen for input for each trial."""
     while True:
@@ -391,11 +392,13 @@ class TaskController(AutoAssign):
 
         grasped = False
 
+        
         # Start key listener thread
         key_queue = queue.Queue()  # Fresh queue for each trial
         pressed_key = None
         listener_thread = threading.Thread(target=key_listener, args=(key_queue,), daemon=True)
         listener_thread.start()
+        
 
         # Data processing: Iterate over each frame of the live stream
         for frame, (path, im, im0s, vid_cap, _) in enumerate(self.dataset):
