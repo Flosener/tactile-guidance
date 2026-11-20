@@ -63,45 +63,34 @@ def interactive_belt_connect(belt_controller):
             belt_controller.connect(belts[0])
 
     elif interface.lower() == "u":
-        # List serial COM ports
-        ports = serial.tools.list_ports.comports()
-        if ports is None or len(ports) == 0:
-            print("No serial port found.")
+        all_ports = serial.tools.list_ports.comports()
+
+        # Keep only real USB serial devices (ttyACM*/ttyUSB*); drop the legacy ttyS* ports
+        ports = [p for p in all_ports
+                if p.vid is not None
+                or p.device.startswith(("/dev/ttyACM", "/dev/ttyUSB"))]
+
+        if len(ports) == 0:
+            print("No USB serial port found. Is the belt plugged in and switched on?")
+            print("Detected ports:", [p.device for p in all_ports])
             return belt_controller
+
         if len(ports) == 1:
-            connect_ack = input("Connect using {}? [y,n]".format(ports[0][0]))
-            if connect_ack.lower() == "y" or connect_ack.lower() == "yes":
-                print("Connect the belt.")
-                belt_controller.connect(ports[0][0])
-            else:
-                print("Unrecognized input.")
-                return belt_controller
+            print("Connect the belt on {} ({}).".format(ports[0].device, ports[0].description))
+            belt_controller.connect(ports[0].device)
         else:
             print("Select the serial COM port to use.")
             for i, port in enumerate(ports):
-                print("{}. {}".format((i + 1), port[0]))
-                try:    
-                    port_name = i
-                    print("   {}".format(port_name))
-                    belt_selection_int = int(port_name)
-                    print("Connect the belt.")
-                    belt_controller.connect(ports[belt_selection_int - 1][0])
-                except Exception as e:
-                    print(e)
-                    pass
-
-            """
+                print("{}. {} - {}".format(i + 1, port.device, port.description))
             belt_selection = input("[1-{}]".format(len(ports)))
             try:
-                #belt_selection_int = int(belt_selection)
-
-            except ValueError:
+                belt_selection_int = int(belt_selection)
+                port = ports[belt_selection_int - 1]
+            except (ValueError, IndexError):
                 print("Unrecognized input.")
                 return belt_controller
-            """
-          
-
-            
+            print("Connect the belt.")
+            belt_controller.connect(port.device)
     
     else:
         print("Unrecognized input.")
