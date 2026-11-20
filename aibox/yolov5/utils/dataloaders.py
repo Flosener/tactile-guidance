@@ -35,6 +35,8 @@ from utils.general import (DATASETS_DIR, LOGGER, NUM_THREADS, TQDM_BAR_FORMAT, c
                            xywh2xyxy, xywhn2xyxy, xyxy2xywhn)
 from utils.torch_utils import torch_distributed_zero_first
 
+import subprocess
+
 # Parameters
 HELP_URL = 'See https://docs.ultralytics.com/yolov5/tutorials/train_custom_data'
 IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp', 'pfm'  # include image suffixes
@@ -363,17 +365,31 @@ class LoadStreams:
             if s == 0:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
-            cap = cv2.VideoCapture(s)
-            assert cap.isOpened(), f'{st}Failed to open {s}'
+
+            if isinstance(s, int) and os.name == 'posix':
+                cap, s = self._open_linux_camera(s, width=640, height=480, fps=30)
+            else:
+                cap = cv2.VideoCapture(s)
+
+            assert cap is not None and cap.isOpened(), f'{st}Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)  # warning: may return 0 or nan
+
+            # Log active camera pixel format (FOURCC)
+            fourcc_int = int(cap.get(cv2.CAP_PROP_FOURCC))
+            fourcc_str = "".join([chr((fourcc_int >> 8 * k) & 0xFF) for k in range(4)])
+            LOGGER.info(f'Camera /dev/video{s} active pixel format: {fourcc_str}')
+
             self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infinite stream fallback
             self.fps[i] = max((fps if math.isfinite(fps) else 0) % 100, 0) or 30  # 30 FPS fallback
 
-            _, self.imgs[i] = cap.read()  # guarantee first frame
+            # Warm up camera and guarantee a valid 3-channel BGR first frame
+            im_first = self._read_bgr_frame(cap, retries=15)
+            assert im_first is not None, f'{st}Failed to read valid frame from {s} (format: {fourcc_str})'
+            self.imgs[i] = im_first
+
             self.threads[i] = Thread(target=self.update, args=([i, cap, s]), daemon=True)
-            #LOGGER.info(f'{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)')
             LOGGER.info(f'Data summary: ({self.frames[i]} frames, {w}x{h}, {self.fps[i]:.2f} FPS)')
             self.threads[i].start()
         LOGGER.info('')  # newline
@@ -386,6 +402,110 @@ class LoadStreams:
         if not self.rect:
             LOGGER.warning('WARNING ⚠️ Stream shapes differ. For optimal performance supply similarly-shaped streams.')
 
+    @staticmethod
+    def _configure_v4l2_node(dev_index, width=640, height=480, fps=30):
+        """Force V4L2 YUYV format at OS level (via v4l2-ctl if installed) and open via OpenCV CAP_V4L2."""
+        dev_path = f'/dev/video{dev_index}'
+        if not os.path.exists(dev_path):
+            return None
+
+        # 1. Try setting YUYV directly in the Linux V4L2 driver before OpenCV opens the device
+        with contextlib.suppress(Exception):
+            subprocess.run(
+                ['v4l2-ctl', '-d', dev_path, f'--set-fmt-video=width={width},height={height},pixelformat=YUYV'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+                check=False,
+            )
+
+        # 2. Open with explicit V4L2 backend
+        cap = cv2.VideoCapture(dev_index, cv2.CAP_V4L2)
+        if not cap.isOpened():
+            cap.release()
+            return None
+
+        # Set resolution -> FOURCC -> resolution (handles UVC cameras that reset FOURCC on resolution change)
+        cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        cap.set(cv2.CAP_PROP_FPS, fps)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        return cap
+
+    @classmethod
+    def _open_linux_camera(cls, requested_index, width=640, height=480, fps=30):
+        """
+        Open the requested V4L2 camera index. If `/dev/video1` is a metadata node (common on Linux when
+        `/dev/video0` + `/dev/video1` belong to the internal webcam and `/dev/video2` is the external camera),
+        automatically probe candidate external indices `[requested_index, 2, 3, 4]`.
+        """
+        candidates = [requested_index]
+        if requested_index > 0:
+            candidates.extend(idx for idx in (2, 3, 4) if idx != requested_index)
+
+        for idx in candidates:
+            cap = cls._configure_v4l2_node(idx, width=width, height=height, fps=fps)
+            if cap is not None:
+                frame = cls._read_bgr_frame(cap, retries=10)
+                if frame is not None:
+                    if idx != requested_index:
+                        LOGGER.warning(
+                            f'WARNING ⚠️ /dev/video{requested_index} is not a capture stream '
+                            f'(likely a V4L2 metadata node). Automatically switched to /dev/video{idx}.'
+                        )
+                    return cap, idx
+                cap.release()
+
+        return None, requested_index
+
+    @staticmethod
+    def _ensure_bgr(im, cap=None):
+        """Ensure captured frame is a 3-channel BGR numpy array even if V4L2 returns raw YUYV or undecoded MJPG."""
+        if im is None or im.size == 0:
+            return None
+
+        # Normal 3-channel BGR image
+        if im.ndim == 3 and im.shape[2] == 3:
+            return im
+
+        # Raw 2-channel YUYV (H, W, 2)
+        if im.ndim == 3 and im.shape[2] == 2:
+            return cv2.cvtColor(im, cv2.COLOR_YUV2BGR_YUYV)
+
+        # Undecoded 1D/2D MJPG buffer
+        if im.ndim <= 2 or (im.ndim == 3 and im.shape[2] == 1):
+            # Try JPEG decode first
+            buf = np.ascontiguousarray(im).reshape(-1)
+            if buf.size >= 2 and buf[0] == 0xFF and buf[1] == 0xD8:
+                decoded = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+                if decoded is not None:
+                    return decoded
+            # Otherwise grayscale to BGR
+            if im.ndim == 2:
+                return cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
+
+        # 4-channel BGRA to BGR
+        if im.ndim == 3 and im.shape[2] == 4:
+            return cv2.cvtColor(im, cv2.COLOR_BGRA2BGR)
+
+        return None
+
+    @classmethod
+    def _read_bgr_frame(cls, cap, retries=10):
+        """Read a frame with retries (allows USB camera time to switch from MJPG to YUYV)."""
+        for _ in range(retries):
+            ret, im = cap.read()
+            if ret and im is not None:
+                bgr = cls._ensure_bgr(im, cap)
+                if bgr is not None:
+                    return bgr
+            time.sleep(0.03)
+        return None
+
     def update(self, i, cap, stream):
         # Read stream `i` frames in daemon thread
         n, f = 0, self.frames[i]  # frame number, frame array
@@ -394,12 +514,19 @@ class LoadStreams:
             cap.grab()  # .read() = .grab() followed by .retrieve()
             if n % self.vid_stride == 0:
                 success, im = cap.retrieve()
-                if success:
-                    self.imgs[i] = im
+                bgr = self._ensure_bgr(im, cap) if success else None
+                if bgr is not None:
+                    self.imgs[i] = bgr
                 else:
-                    LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
+                    LOGGER.warning('WARNING ⚠️ Video stream unresponsive, attempting to reconnect...')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
-                    cap.open(stream)  # re-open stream if signal was lost
+                    if isinstance(stream, int) and os.name == 'posix':
+                        cap.release()
+                        new_cap = self._configure_v4l2_node(stream, width=640, height=480, fps=30)
+                        if new_cap is not None:
+                            cap = new_cap
+                    else:
+                        cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
 
     def __iter__(self):

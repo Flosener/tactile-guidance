@@ -41,6 +41,23 @@ obs_grasping_t = [["time", "num_instructions", "location", "block", "condition",
 obs_grasping_a = [["time", "num_instructions", "location", "block", "condition", "success"]]
 vibration_intensity = 100
 
+from pynput import keyboard as kb
+
+_pressed = set()
+
+def _on_press(key):
+    _pressed.add(key)
+
+def _on_release(key):
+    _pressed.discard(key)
+
+kb.Listener(on_press=_on_press, on_release=_on_release, daemon=True).start()
+
+def is_pressed(name):
+    if len(name) == 1:
+        return kb.KeyCode.from_char(name) in _pressed
+    return getattr(kb.Key, name) in _pressed   # "enter", "space", "esc", "up", ...
+
 
 # the main function
 def main():
@@ -50,7 +67,7 @@ def main():
 
     # Wait for user to continue.
     while True:
-        if keyboard.is_pressed("enter"):
+        if is_pressed("enter"):
             break
 
     belt_controller = connect_belt()
@@ -304,12 +321,12 @@ def grasping_task(condition, prev):
 
     while True:
         # Check for start of trial.
-        if (keyboard.is_pressed("left") or keyboard.is_pressed("right") or keyboard.is_pressed("up") or keyboard.is_pressed("down") or keyboard.is_pressed("g")) and new_trial and not keyboard.is_pressed("s"):
+        if (is_pressed("left") or is_pressed("right") or is_pressed("up") or is_pressed("down") or is_pressed("g")) and new_trial and not is_pressed("s"):
             begin = time.perf_counter()
             new_trial = False
         
         # Quit the task.
-        if keyboard.is_pressed("q"):
+        if is_pressed("q"):
             if condition == "tactile":
                 belt_controller.stop_vibration()
             return
@@ -320,7 +337,7 @@ def grasping_task(condition, prev):
                 time_limit_reached = True
         
         # Stop the trial, calculate the time and append the observations.
-        if (keyboard.is_pressed("s") or (time_limit_reached)) and not new_trial:
+        if (is_pressed("s") or (time_limit_reached)) and not new_trial:
             if condition == "tactile":
                 belt_controller.stop_vibration()
 
@@ -379,7 +396,7 @@ def grasping_task(condition, prev):
                     return prev
             else: print(target_list[target_idx]) # Print target.
 
-        elif keyboard.is_pressed('right') and not new_trial:
+        elif is_pressed('right') and not new_trial:
             curr = "r"
             if curr != last:
                 if condition == "tactile":
@@ -388,7 +405,7 @@ def grasping_task(condition, prev):
                 print("Right")
                 last = curr
 
-        elif keyboard.is_pressed('left') and not new_trial:
+        elif is_pressed('left') and not new_trial:
             curr = "l"
             if curr != last:
                 if condition == "tactile":
@@ -398,7 +415,7 @@ def grasping_task(condition, prev):
                 last = curr
 
 
-        elif keyboard.is_pressed('down') and not new_trial:
+        elif is_pressed('down') and not new_trial:
             curr = "d"
             if curr != last:
                 if condition == "tactile":
@@ -407,7 +424,7 @@ def grasping_task(condition, prev):
                 print("Down")
                 last = curr
 
-        elif keyboard.is_pressed('up') and not new_trial:
+        elif is_pressed('up') and not new_trial:
             curr = "u"
             if last != curr:
                 if condition == "tactile":
@@ -416,7 +433,7 @@ def grasping_task(condition, prev):
                 print("Up")
                 last = curr
 
-        elif keyboard.is_pressed('G') and not new_trial:
+        elif is_pressed('G') and not new_trial:
             curr = "f"
             if last != curr:
                 if condition == "tactile":
@@ -449,12 +466,12 @@ def present_example_stimuli(condition):
 
     while True:
         # Stop the stimulus.
-        if keyboard.is_pressed('s'):
+        if is_pressed('s'):
             if condition == "tactile":
                 belt_controller.stop_vibration()
             last = ""
         # Present right stimulus.
-        elif keyboard.is_pressed('right'):
+        elif is_pressed('right'):
             curr = "r"
             if curr != last:
                 if condition == "tactile":
@@ -462,7 +479,7 @@ def present_example_stimuli(condition):
                 print("Right")
                 last = curr
         # Present up stimulus.
-        elif keyboard.is_pressed('up'):
+        elif is_pressed('up'):
             curr = "u"
             if curr != last:
                 if condition == "tactile":
@@ -470,7 +487,7 @@ def present_example_stimuli(condition):
                 print("Up")
                 last = curr
         # Present down stimulus.
-        elif keyboard.is_pressed('down'):
+        elif is_pressed('down'):
             curr = "d"
             if curr != last:
                 if condition == "tactile":
@@ -478,7 +495,7 @@ def present_example_stimuli(condition):
                 print("Down")
                 last = curr
         # Present left stimulus.
-        elif keyboard.is_pressed('left'):
+        elif is_pressed('left'):
             curr = "l"
             if curr != last:
                 if condition == "tactile":
@@ -487,7 +504,7 @@ def present_example_stimuli(condition):
                 last = curr
 
         # Grasping Command
-        elif keyboard.is_pressed('g'):
+        elif is_pressed('g'):
             curr = "g"
             if curr != last:
                 if condition == "tactile":
@@ -509,7 +526,7 @@ def present_example_stimuli(condition):
                 last = curr
 
         # Quit.
-        if keyboard.is_pressed("q"):
+        if is_pressed("q"):
             if condition == "tactile":
                 belt_controller.stop_vibration()
             break
@@ -555,13 +572,13 @@ def collect_response():
     time_post_stim = time.perf_counter()
     response = ""
     while time.perf_counter() - time_post_stim < 3:  # Listen to keyboard input for 3 seconds.
-        if keyboard.is_pressed("left"):
+        if is_pressed("left"):
             response = "left"
-        if keyboard.is_pressed("right"):
+        if is_pressed("right"):
             response = "right"
-        if keyboard.is_pressed("up"):
+        if is_pressed("up"):
             response = "up"
-        if keyboard.is_pressed("down"):
+        if is_pressed("down"):
             response = "down"
     if response == "":
         response = "no response"
